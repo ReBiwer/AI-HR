@@ -13,6 +13,11 @@ class AuthTokens(TypedDict):
 class IHHService(ABC):
 
     @abstractmethod
+    def get_auth_url(self) -> str:
+        """Метод для получения url для OAuth авторизации"""
+        ...
+
+    @abstractmethod
     async def auth(self, code: str) -> AuthTokens:
         """Метод для авторизации, принимает код полученный после редиректа
          возвращает словарь с access и refresh токенами"""
