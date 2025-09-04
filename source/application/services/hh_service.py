@@ -13,8 +13,9 @@ class AuthTokens(TypedDict):
 class IHHService(ABC):
 
     @abstractmethod
-    async def auth(self) -> AuthTokens:
-        """Метод для авторизации, возвращает словарь с access и refresh токенами"""
+    async def auth(self, code: str) -> AuthTokens:
+        """Метод для авторизации, принимает код полученный после редиректа
+         возвращает словарь с access и refresh токенами"""
         ...
 
     @abstractmethod
@@ -28,6 +29,6 @@ class IHHService(ABC):
         ...
 
     @abstractmethod
-    async def send_response_to_vacancy(self, response: ResponseToVacancyEntity) -> None:
+    async def send_response_to_vacancy(self, response: ResponseToVacancyEntity) -> bool:
         """Метод для отправки отклика на вакансию"""
         ...
