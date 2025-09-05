@@ -1,28 +1,25 @@
 from datetime import datetime
-from pydantic import EmailStr
+from pydantic import EmailStr, BaseModel
 
 from source.domain.entities.base import BaseEntity
 
 
-class ExperienceEntity(BaseEntity):
+class ExperienceEntity(BaseModel):
     company: str
     position: str
-    start_work: datetime
-    end_work: datetime | None
-    responsibilities: str
-    achievements: str
+    start: datetime
+    end: datetime | None
+    description: str
 
 
-class ContactEntity(BaseEntity):
+class ContactEntity(BaseModel):
     phone: str
     email: EmailStr
-    telegram: str
 
 
 class ResumeEntity(BaseEntity):
     name: str
     surname: str
     job_description: list[ExperienceEntity]
-    skills: list[str]
-    about_me: str
+    skills: set[str]
     contacts: ContactEntity
