@@ -6,7 +6,7 @@ from hh_api.client import HHClient, TokenManager
 from source.infrastructure.settings.app import app_settings
 from source.application.services.hh_service import IHHService, AuthTokens
 from source.domain.entities.response import ResponseToVacancyEntity
-from source.domain.entities.resume import ResumeEntity
+from source.domain.entities.resume import ResumeEntity, ContactEntity, ExperienceEntity
 
 
 class HHService(IHHService):
@@ -26,6 +26,24 @@ class HHService(IHHService):
         )
         self.hh_client = HHClient(self._hh_tm, subject=app_settings.HH_FAKE_SUBJECT)
 
+    @staticmethod
+    def _extract_data_resume(data: dict) -> ResumeEntity:
+        contact_data = {
+            f"{contact['kind']}": contact['contact_value']
+            for contact in data["contact"]
+        }
+        resume_data = {
+            "name": data["first_name"],
+            "surname": data["last_name"],
+            "job_description": [
+                ExperienceEntity.model_validate(experience)
+                for experience in data["experience"]
+            ],
+            "skills": data["skill_set"],
+            "contacts": ContactEntity.model_validate(contact_data)
+        }
+        return ResumeEntity.model_validate(resume_data)
+
     def get_auth_url(self):
         return self._hh_tm.authorization_url()
 
@@ -35,7 +53,7 @@ class HHService(IHHService):
 
     async def get_resume(self, resume_id: str) -> ResumeEntity:
         result = await self.hh_client.get_resume(resume_id)
-        return ResumeEntity.model_validate(result)
+        return self._extract_data_resume(result)
 
     async def get_resumes(self) -> list[ResumeEntity]:
         results: dict = (await self.hh_client._request("GET", "/resumes/mine")).json()
