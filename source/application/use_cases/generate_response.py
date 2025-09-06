@@ -12,7 +12,7 @@ class GenerateResponseUseCase:
         self.ai_service = ai_service
 
     async def __call__(self, query: QueryCreateDTO) -> ResponseToVacancyEntity:
-        resume = await self.hh_service.get_resume(query.resume_id)
+        resume = await self.hh_service.get_resume_data(query.resume_id)
         query_entity = QueryEntity.model_validate(query, from_attributes=True)
         response = await self.ai_service.generate_response(query_entity, resume)
         return response
