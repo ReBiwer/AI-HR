@@ -1,6 +1,7 @@
 from typing import TypedDict
 from abc import ABC, abstractmethod
 
+from source.domain.entities.query import VacancyEntity
 from source.domain.entities.resume import ResumeEntity
 from source.domain.entities.response import ResponseToVacancyEntity
 
@@ -24,13 +25,28 @@ class IHHService(ABC):
         ...
 
     @abstractmethod
-    async def get_resume(self, resume_id: str) -> ResumeEntity:
-        """Метод для загрузки резюме"""
+    async def get_vacancy_data(self, vacancy_id: str) -> VacancyEntity:
+        """Метод для получения информации о вакансии"""
         ...
 
     @abstractmethod
-    async def get_resumes(self) -> list[ResumeEntity]:
-        """Метод для получения всех имеющихся резюме"""
+    async def get_employer_data(self, employer_id: str):
+        """Метод для получения информации о работодателе"""
+        ...
+
+    @abstractmethod
+    async def get_resume_data(self, resume_id: str) -> ResumeEntity:
+        """Метод для получения информации из резюме авторизованного пользователя"""
+        ...
+
+    @abstractmethod
+    async def get_good_responses(self, quantity_responses: int = 10) -> list[ResponseToVacancyEntity]:
+        """Метод для получения определенного количества удачных откликов"""
+        ...
+
+    @abstractmethod
+    async def get_user_rules(self) -> dict:
+        """Метод для получения правил пользователя для формирования отклика"""
         ...
 
     @abstractmethod
