@@ -2,6 +2,7 @@ from typing import TypedDict
 from abc import ABC, abstractmethod
 
 from source.domain.entities.query import VacancyEntity
+from source.domain.entities.employer import EmployerEntity
 from source.domain.entities.resume import ResumeEntity
 from source.domain.entities.response import ResponseToVacancyEntity
 
@@ -30,7 +31,7 @@ class IHHService(ABC):
         ...
 
     @abstractmethod
-    async def get_employer_data(self, employer_id: str):
+    async def get_employer_data(self, employer_id: str) -> EmployerEntity:
         """Метод для получения информации о работодателе"""
         ...
 
