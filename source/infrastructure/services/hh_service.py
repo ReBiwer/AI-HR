@@ -6,7 +6,7 @@ from hh_api.auth.token_manager import OAuthConfig
 from hh_api.client import HHClient, TokenManager
 
 from source.domain.entities.employer import EmployerEntity
-from source.domain.entities.query import VacancyEntity, Experience
+from source.domain.entities.vacancy import Experience, VacancyEntity
 from source.infrastructure.settings.app import app_settings
 from source.application.services.hh_service import IHHService, AuthTokens
 from source.domain.entities.response import ResponseToVacancyEntity
