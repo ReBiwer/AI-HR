@@ -39,6 +39,7 @@ class HHService(IHHService):
         """
         vacancy_data = {
             "id": data["id"],
+            "url_vacancy": data["alternate_url"],
             "name": data["name"],
             "experience": {
                 Experience(id=exp['id'], name=exp['name'])
