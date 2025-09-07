@@ -8,8 +8,11 @@ class AppSettings(BaseSettings):
     HH_CLIENT_ID: str
     HH_CLIENT_SECRET: str
     HH_REDIRECT_URI: str
-
     HH_FAKE_SUBJECT: str = 1
+
+    OPENAI_MODEL: str
+    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    OPENROUTER_API_KEY: str
 
     model_config = SettingsConfigDict(env_file=f"/{BASE_DIR}/.env", extra="ignore")
 
