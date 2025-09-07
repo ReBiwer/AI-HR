@@ -32,7 +32,13 @@ class HHService(IHHService):
 
     @staticmethod
     def _serialize_data_vacancy(data: dict) -> VacancyEntity:
+        """
+        Сериализация данных возвращаемых из API hh.ru
+        :param data: пример возвращаемых данных можно посмотреть тут: https://api.hh.ru/openapi/redoc#tag/Vakansii
+        :return: VacancyEntity
+        """
         vacancy_data = {
+            "id": data["id"],
             "name": data["name"],
             "experience": {
                 Experience(id=exp['id'], name=exp['name'])
@@ -45,16 +51,31 @@ class HHService(IHHService):
 
     @staticmethod
     def _serialize_data_employer(data: dict) -> EmployerEntity:
-        employer_data = {}
+        """
+        Сериализация данных возвращаемых из API hh.ru
+        :param data: пример возвращаемых данных можно посмотреть тут: https://api.hh.ru/openapi/redoc#tag/Podskazki/operation/get-registered-companies-suggests
+        :return: EmployerEntity
+        """
+        employer_data = {
+            "id": data["id"],
+            "name": data["name"],
+            "description": data["description"]
+        }
         return EmployerEntity.model_validate(employer_data)
 
     @staticmethod
     def _serialize_data_resume(data: dict) -> ResumeEntity:
+        """
+        Сериализация данных возвращаемых из API hh.ru
+        :param data: пример возвращаемых данных можно посмотреть тут: https://api.hh.ru/openapi/redoc#tag/Rezyume.-Prosmotr-informacii/operation/get-resume
+        :return: ResumeEntity
+        """
         contact_data = {
             f"{contact['kind']}": contact['contact_value']
             for contact in data["contact"]
         }
         resume_data = {
+            "id": data["id"],
             "name": data["first_name"],
             "surname": data["last_name"],
             "job_description": [
@@ -68,10 +89,19 @@ class HHService(IHHService):
 
     @staticmethod
     def _serialize_data_response_to_vacancy(data: dict) -> ResponseToVacancyEntity:
+        """
+        Сериализация данных возвращаемых из API hh.ru
+        :param data: пример возвращаемых данных можно посмотреть тут: https://api.hh.ru/openapi/redoc#tag/Perepiska-(otklikipriglasheniya)-dlya-soiskatelya/operation/get-negotiations
+        :return:
+        """
         response_data = {
+            "id": data["id"],
             "url_vacancy": data["url"],
             "vacancy_id": data["id"],
             "resume_id": data["resume"]["id"],
+            # ключ-значение message было добавлено отдельно
+            # схема получения находится тут
+            # https://api.hh.ru/openapi/redoc#tag/Perepiska-(otklikipriglasheniya)-dlya-soiskatelya/operation/get-negotiation-messages
             "message": data["message"]
         }
         return ResponseToVacancyEntity.model_validate(response_data)
