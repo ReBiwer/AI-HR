@@ -1,7 +1,7 @@
 from typing import TypedDict
 from abc import ABC, abstractmethod
 
-from source.domain.entities.query import VacancyEntity
+from source.domain.entities.vacancy import VacancyEntity
 from source.domain.entities.employer import EmployerEntity
 from source.domain.entities.resume import ResumeEntity
 from source.domain.entities.response import ResponseToVacancyEntity
