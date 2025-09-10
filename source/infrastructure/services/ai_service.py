@@ -8,12 +8,11 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.checkpoint.memory import BaseCheckpointSaver
 
 from source.infrastructure.settings.app import app_settings
-from source.application.services.ai_service import IAIService
+from source.application.services.ai_service import IAIService, GenerateResponseData
 from source.domain.entities.response import ResponseToVacancyEntity
 from source.domain.entities.vacancy import VacancyEntity
 from source.domain.entities.resume import ResumeEntity
 from source.domain.entities.employer import EmployerEntity
-from source.domain.entities.base import BaseEntity
 
 
 class AIServiceState(BaseModel):
@@ -67,7 +66,7 @@ class AIService(IAIService):
 
     async def generate_response(
             self,
-            data: dict[str, BaseEntity]
+            data: GenerateResponseData
     ) -> ResponseToVacancyEntity:
         start_state = AIServiceState.model_validate(data)
         result = await self._workflow.ainvoke(start_state)
