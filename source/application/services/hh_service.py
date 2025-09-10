@@ -1,7 +1,9 @@
 import re
+import asyncio
 from typing import TypedDict
 from abc import ABC, abstractmethod
 
+from source.application.services.ai_service import GenerateResponseData
 from source.domain.entities.vacancy import VacancyEntity
 from source.domain.entities.employer import EmployerEntity
 from source.domain.entities.resume import ResumeEntity
@@ -55,6 +57,15 @@ class IHHService(ABC):
     @abstractmethod
     async def get_user_rules(self) -> dict:
         """Метод для получения правил пользователя для формирования отклика"""
+        ...
+
+    @abstractmethod
+    async def data_collect_for_llm(
+            self,
+            vacancy_id: str,
+            resume_id: str,
+    ) -> GenerateResponseData:
+        """Метод для сбора всех данных для отправки в llm для генерации отклика"""
         ...
 
     @abstractmethod
