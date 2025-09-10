@@ -14,3 +14,4 @@ class VacancyEntity(BaseEntity):
     experience: Experience
     description: str
     key_skills: set[str]
+    employer_id: str
