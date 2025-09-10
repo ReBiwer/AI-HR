@@ -1,7 +1,6 @@
 from source.application.services.ai_service import IAIService
 from source.application.services.hh_service import IHHService
 from source.application.dtos.query import QueryCreateDTO
-from source.domain.entities.query import QueryEntity
 from source.domain.entities.response import ResponseToVacancyEntity
 
 
@@ -12,7 +11,7 @@ class GenerateResponseUseCase:
         self.ai_service = ai_service
 
     async def __call__(self, query: QueryCreateDTO) -> ResponseToVacancyEntity:
-        resume = await self.hh_service.get_resume_data(query.resume_id)
-        query_entity = QueryEntity.model_validate(query, from_attributes=True)
-        response = await self.ai_service.generate_response(query_entity, resume)
+        vacancy_id = self.hh_service.extract_vacancy_id_from_url(query.url_vacancy)
+        data = await self.hh_service.data_collect_for_llm(vacancy_id, query.resume_id)
+        response = await self.ai_service.generate_response(data)
         return response
