@@ -4,6 +4,7 @@ from dishka import FromDishka
 from dishka.integrations.fastapi import DishkaRoute
 
 from source.application.services.hh_service import IHHService
+from source.application.use_cases.auth_hh import OAuthHHUseCase
 
 
 router = APIRouter(
@@ -18,40 +19,25 @@ async def get_oauth_url(hh_service: FromDishka[IHHService]) -> str:
 
 @router.get("/hh/get_tokens")
 async def get_tokens(
-    hh_service: FromDishka[IHHService],
+    use_case: FromDishka[OAuthHHUseCase],
     code: Annotated[str, Query(description="Код авторизации от HeadHunter")],
-    state: Annotated[str | None, Query(description="State параметр для проверки безопасности")] = None,
 ) -> dict:
     """
     Эндпоинт для получения токенов после OAuth редиректа от HeadHunter.
     
     Параметры:
     - code: Обязательный код авторизации, который HeadHunter передает в query параметрах
-    - state: Опциональный параметр состояния для дополнительной безопасности
     
     Возвращает словарь с токенами доступа.
     """
-    # Базовая валидация state параметра (можно расширить для хранения в сессии/кэше)
-    if state is not None and len(state.strip()) == 0:
-        raise HTTPException(
-            status_code=400,
-            detail="State параметр не может быть пустым"
-        )
-    
     try:
         # Получаем токены используя код авторизации
-        tokens = await hh_service.auth(code)
+        tokens = await use_case(code)
         return {
             "message": "Авторизация прошла успешно",
-            "access_token": tokens["access_token"],
-            "refresh_token": tokens["refresh_token"]
+            "access_token": tokens.access_token,
+            "refresh_token": tokens.refresh_token,
         }
-    except ValueError as e:
-        # Ошибки валидации кода авторизации
-        raise HTTPException(
-            status_code=400,
-            detail=f"Неверный код авторизации: {str(e)}"
-        )
     except ConnectionError as e:
         # Ошибки соединения с API HeadHunter
         raise HTTPException(
