@@ -5,6 +5,7 @@ from hh_api.auth.keyed_stores import InMemoryKeyedTokenStore
 from hh_api.auth.token_manager import OAuthConfig
 from hh_api.client import HHClient, TokenManager
 
+from source.application.services.ai_service import GenerateResponseData
 from source.domain.entities.employer import EmployerEntity
 from source.domain.entities.vacancy import Experience, VacancyEntity
 from source.infrastructure.settings.app import app_settings
@@ -46,7 +47,8 @@ class HHService(IHHService):
                 for exp in data["experience"]
             },
             "description": data["description"],
-            "key_skills": data["key_skills"]
+            "key_skills": data["key_skills"],
+            "employer_id": data["employer"]["id"]
         }
         return VacancyEntity.model_validate(vacancy_data)
 
@@ -154,6 +156,27 @@ class HHService(IHHService):
             "rule_1": "Длина отклика не более 800 символов. Допускается отклонение +- 20 символов"
         }
         return rules
+
+    async def data_collect_for_llm(
+            self,
+            vacancy_id: str,
+            resume_id: str,
+    ) -> GenerateResponseData:
+        vacancy_data = await self.get_vacancy_data(vacancy_id)
+        tasks = [
+            self.get_employer_data(vacancy_data.employer_id),
+            self.get_resume_data(resume_id),
+            self.get_user_rules(),
+            self.get_good_responses(),
+        ]
+        result = await asyncio.gather(*tasks)
+        return GenerateResponseData(
+            vacancy=vacancy_data,
+            employer=result[0],
+            resume=result[1],
+            user_rules=result[2],
+            good_responses=result[3],
+        )
 
     async def send_response_to_vacancy(self, response: ResponseToVacancyEntity) -> bool:
         return await self.hh_client.apply_to_vacancy(
