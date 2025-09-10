@@ -107,11 +107,6 @@ class HHService(IHHService):
         }
         return ResponseToVacancyEntity.model_validate(response_data)
 
-    @staticmethod
-    def extract_vacancy_id_from_url(url: str) -> str:
-        pattern = r"/https?:\/\/[^\/]+\.hh\.ru\/vacancy\/(\d+)/gm"
-        match = re.search(pattern, url)
-        return match.group(1)
 
     def get_auth_url(self):
         return self._hh_tm.authorization_url()

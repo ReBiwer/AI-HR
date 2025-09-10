@@ -1,3 +1,4 @@
+import re
 from typing import TypedDict
 from abc import ABC, abstractmethod
 
@@ -13,6 +14,12 @@ class AuthTokens(TypedDict):
 
 
 class IHHService(ABC):
+
+    @staticmethod
+    def extract_vacancy_id_from_url(url: str) -> str:
+        pattern = r"/https?:\/\/[^\/]+\.hh\.ru\/vacancy\/(\d+)/gm"
+        match = re.search(pattern, url)
+        return match.group(1)
 
     @abstractmethod
     def get_auth_url(self) -> str:
