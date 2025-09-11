@@ -13,7 +13,7 @@ router = APIRouter(
     route_class=DishkaRoute,
 )
 
-@router.get("hh/get_oauth_url")
+@router.get("/hh/get_oauth_url")
 async def get_oauth_url(hh_service: FromDishka[IHHService]) -> str:
     return hh_service.get_auth_url()
 
@@ -35,8 +35,8 @@ async def get_tokens(
         tokens = await use_case(code)
         return {
             "message": "Авторизация прошла успешно",
-            "access_token": tokens.access_token,
-            "refresh_token": tokens.refresh_token,
+            "access_token": tokens["access_token"],
+            "refresh_token": tokens["refresh_token"],
         }
     except ConnectionError as e:
         # Ошибки соединения с API HeadHunter
