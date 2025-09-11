@@ -9,6 +9,8 @@ from source.application.use_cases.auth_hh import OAuthHHUseCase
 
 
 class ServicesProviders(Provider):
+    scope = Scope.APP
+
     @provide
     def get_hh_service(self) -> IHHService:
         return HHService()
@@ -19,6 +21,8 @@ class ServicesProviders(Provider):
 
 
 class UseCasesProviders(Provider):
+    scope = Scope.APP
+
     @provide
     def get_generate_response_use_case(
         self,
