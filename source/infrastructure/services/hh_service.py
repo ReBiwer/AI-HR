@@ -1,4 +1,3 @@
-import re
 import asyncio
 from fake_useragent import UserAgent
 from hh_api.auth.keyed_stores import InMemoryKeyedTokenStore
