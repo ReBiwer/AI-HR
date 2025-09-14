@@ -5,7 +5,7 @@ from dishka import FromDishka
 from dishka.integrations.fastapi import DishkaRoute
 
 from source.application.services.hh_service import IHHService
-from source.application.use_cases.auth_hh import OAuthHHUseCase
+from source.application.services.generator_urls import IGeneratorRedirectURL
 
 router = APIRouter(
     prefix="/auth",
@@ -39,6 +39,7 @@ async def get_oauth_url(
 async def get_tokens(
         request: Request,
         hh_service: FromDishka[IHHService],
+        generator_urls: FromDishka[IGeneratorRedirectURL],
         code: Annotated[str, Query(description="Код авторизации от HeadHunter")],
         state: Annotated[str, Query(description="Состояние переданное для возврата после авторизации")],
 ) -> RedirectResponse:
@@ -47,12 +48,16 @@ async def get_tokens(
 
     :param request: Объект запроса для получения redirect_url по имени (state)
     :param hh_service: Сервис для работы с hh.ru
+    :param generator_urls: Сервис для создания url'ов для редиректа
     :param code: Обязательный код авторизации, который HeadHunter передает в query параметрах
     :param state: Обязательное состояние для редиректа после получения токенов
     :return:
     """
     try:
-        redirect_url = request.url_for(state)
+        if state == "telegram":
+            redirect_url = await generator_urls.telegram_url(state)
+        else:
+            redirect_url = generator_urls.backend_url(request, state)
         tokens = await hh_service.auth(code)
         response = RedirectResponse(redirect_url)
         response.set_cookie("access_token", value=tokens["access_token"])
