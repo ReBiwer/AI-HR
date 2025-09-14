@@ -24,7 +24,7 @@ class IHHService(ABC):
         return match.group(1)
 
     @abstractmethod
-    def get_auth_url(self) -> str:
+    def get_auth_url(self, state: str) -> str:
         """Метод для получения url для OAuth авторизации"""
         ...
 

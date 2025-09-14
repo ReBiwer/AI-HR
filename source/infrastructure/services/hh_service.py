@@ -109,8 +109,8 @@ class HHService(IHHService):
         return ResponseToVacancyEntity.model_validate(response_data)
 
 
-    def get_auth_url(self):
-        return self._hh_tm.authorization_url()
+    def get_auth_url(self, state: str):
+        return self._hh_tm.authorization_url(state)
 
     async def auth(self, code: str) -> AuthTokens:
         tokens = await self._hh_tm.exchange_code(app_settings.HH_FAKE_SUBJECT, code=code)
