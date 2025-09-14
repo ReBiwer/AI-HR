@@ -2,8 +2,10 @@ from dishka import Provider, Scope, provide
 
 from source.infrastructure.services.hh_service import HHService
 from source.infrastructure.services.ai_service import AIService
+from source.infrastructure.services.generator_urls import GeneratorRedirectURL
 from source.application.services.hh_service import IHHService
 from source.application.services.ai_service import IAIService
+from source.application.services.generator_urls import IGeneratorRedirectURL
 from source.application.use_cases.generate_response import GenerateResponseUseCase
 from source.application.use_cases.auth_hh import OAuthHHUseCase
 
@@ -18,6 +20,10 @@ class ServicesProviders(Provider):
     @provide
     def get_ai_service(self) -> IAIService:
         return AIService()
+
+    @provide
+    def get_generate_urls_service(self) -> IGeneratorRedirectURL:
+        return GeneratorRedirectURL()
 
 
 class UseCasesProviders(Provider):
