@@ -1,11 +1,11 @@
 from typing import Annotated
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from dishka import FromDishka
 from dishka.integrations.fastapi import DishkaRoute
 
 from source.application.services.hh_service import IHHService
 from source.application.use_cases.auth_hh import OAuthHHUseCase
-
 
 router = APIRouter(
     prefix="/auth",
@@ -13,31 +13,51 @@ router = APIRouter(
     route_class=DishkaRoute,
 )
 
-@router.get("/hh/get_oauth_url")
-async def get_oauth_url(hh_service: FromDishka[IHHService]) -> str:
-    return hh_service.get_auth_url()
 
-@router.get("/hh/get_tokens")
+@router.get(
+    "/hh/oauth/url",
+    name="get_oauth_url"
+)
+async def get_oauth_url(
+        state: Annotated[str, Query(description="Текущее состояние, для возврата после авторизации")],
+        hh_service: FromDishka[IHHService]
+) -> str:
+    """
+    Эндпоинт для получения ссылки для авторизации
+
+    :param state: Текущее состояние куда нужно будет выполнить редирект после получения токенов
+    :param hh_service: Сервис для работы с hh.ru
+    :return:
+    """
+    return hh_service.get_auth_url(state)
+
+
+@router.get(
+    "/hh/tokens",
+    name="get_hh_token"
+)
 async def get_tokens(
-    use_case: FromDishka[OAuthHHUseCase],
-    code: Annotated[str, Query(description="Код авторизации от HeadHunter")],
-) -> dict:
+        request: Request,
+        hh_service: FromDishka[IHHService],
+        code: Annotated[str, Query(description="Код авторизации от HeadHunter")],
+        state: Annotated[str, Query(description="Состояние переданное для возврата после авторизации")],
+) -> RedirectResponse:
     """
     Эндпоинт для получения токенов после OAuth редиректа от HeadHunter.
-    
-    Параметры:
-    - code: Обязательный код авторизации, который HeadHunter передает в query параметрах
-    
-    Возвращает словарь с токенами доступа.
+
+    :param request: Объект запроса для получения redirect_url по имени (state)
+    :param hh_service: Сервис для работы с hh.ru
+    :param code: Обязательный код авторизации, который HeadHunter передает в query параметрах
+    :param state: Обязательное состояние для редиректа после получения токенов
+    :return:
     """
     try:
-        # Получаем токены используя код авторизации
-        tokens = await use_case(code)
-        return {
-            "message": "Авторизация прошла успешно",
-            "access_token": tokens["access_token"],
-            "refresh_token": tokens["refresh_token"],
-        }
+        redirect_url = request.url_for(state)
+        tokens = await hh_service.auth(code)
+        response = RedirectResponse(redirect_url)
+        response.set_cookie("access_token", value=tokens["access_token"])
+        response.set_cookie("refresh_token", value=tokens["refresh_token"])
+        return response
     except ConnectionError as e:
         # Ошибки соединения с API HeadHunter
         raise HTTPException(
