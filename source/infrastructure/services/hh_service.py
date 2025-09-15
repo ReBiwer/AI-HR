@@ -1,16 +1,31 @@
 import asyncio
+from typing import Optional, Dict, Any
 from fake_useragent import UserAgent
 from hh_api.auth.keyed_stores import InMemoryKeyedTokenStore
 from hh_api.auth.token_manager import OAuthConfig
-from hh_api.client import HHClient, TokenManager
+from hh_api.client import HHClient, TokenManager, Subject
 
 from source.application.services.ai_service import GenerateResponseData
 from source.domain.entities.employer import EmployerEntity
+from source.domain.entities.user import UserEntity
 from source.domain.entities.vacancy import Experience, VacancyEntity
 from source.infrastructure.settings.app import app_settings
 from source.application.services.hh_service import IHHService, AuthTokens
 from source.domain.entities.response import ResponseToVacancyEntity
 from source.domain.entities.resume import ResumeEntity, ContactEntity, ExperienceEntity
+
+
+class MyHHClient(HHClient):
+
+    async def get_employer(self, employer_id: str, *, subject: Optional[Subject] = None) -> Dict[str, Any]:
+        return (await self._request("GET", f"/employers/{employer_id}", subject=subject)).json()
+
+    async def get_me(self) -> Dict[str, Any]:
+        return (await self._request("GET", f"/me")).json()
+
+    async def get_resume_from_url(self, url: str, subject: Optional[Subject] = None) -> Dict[str, Any]:
+        headers = self._auth_headers(subject=subject)
+        return (await self._client.request("GET", url, headers=headers)).json()
 
 
 class HHService(IHHService):
@@ -28,7 +43,24 @@ class HHService(IHHService):
             store=self._keyed_store,
             user_agent=self._user_agent
         )
-        self.hh_client = HHClient(self._hh_tm, subject=app_settings.HH_FAKE_SUBJECT)
+        self.hh_client = MyHHClient(self._hh_tm, subject=app_settings.HH_FAKE_SUBJECT)
+
+    def _serialize_data_user(self, data: dict) -> UserEntity:
+        """
+        Сериализация данных пользователя возвращаемых из API hh.ru
+        :param data: пример возвращаемых данных можно посмотреть тут: https://api.hh.ru/openapi/redoc#tag/Informaciya-o-soiskatele
+        :return: UserEntity
+        """
+        user_data = {
+            "name": data["first_name"],
+            "mid_name": data["mid_name"],
+            "last_name": data["last_name"],
+            "phone": data["phone"],
+            "email": data["email"] if data["email"] else None,
+            # Ключ resume_data добавлен ранее, отдельным запросом
+            "resume": self._serialize_data_resume(data["resume_data"])
+        }
+        return UserEntity.model_validate(user_data)
 
     @staticmethod
     def _serialize_data_vacancy(data: dict) -> VacancyEntity:
@@ -109,6 +141,13 @@ class HHService(IHHService):
         return ResponseToVacancyEntity.model_validate(response_data)
 
 
+    async def get_me(self) -> UserEntity:
+        user_data = await self.hh_client.get_me()
+        resume_url = user_data["resumes_url"]
+        resume_data = await self.hh_client.get_resume_from_url(resume_url)
+        user_data["resume_data"] = resume_data
+        return self._serialize_data_user(user_data)
+
     def get_auth_url(self, state: str):
         return self._hh_tm.authorization_url(state)
 
@@ -121,7 +160,7 @@ class HHService(IHHService):
         return self._serialize_data_vacancy(data)
 
     async def get_employer_data(self, employer_id: str) -> EmployerEntity:
-        data = (await self.hh_client._request("GET", f"/employers/{employer_id}")).json()
+        data = await self.hh_client.get_employer(employer_id)
         return self._serialize_data_employer(data)
 
     async def get_resume_data(self, resume_id: str) -> ResumeEntity:
