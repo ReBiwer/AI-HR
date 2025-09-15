@@ -5,10 +5,72 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "aiogram>=3.22.0",
     "alembic>=1.16.5",
     "asyncpg>=0.30.0",
+    "dishka>=1.6.0",
+    "fake-useragent>=2.2.0",
     "fastapi[all]>=0.116.1",
+    "hh-api>=0.1.4",
     "langchain>=0.3.27",
+    "langchain-openai>=0.3.32",
     "langgraph>=0.6.6",
     "pytest>=8.4.1",
+    "pytest-asyncio>=0.24.0",
+    "pytest-playwright-asyncio>=0.7.1",
+    "python-jose[cryptography]>=3.5.0",
+    "uvicorn>=0.32.0",
 ]
+
+[tool.pytest.ini_options]
+# Путь к директорию с тестами
+testpaths = ["tests"]
+
+# Область event_loop'а фикстур
+asyncio_default_fixture_loop_scope = "session"
+# Область event_loop'а тестов
+asyncio_default_test_loop_scope = "session"
+
+# Паттерны для поиска файлов с тестами
+python_files = ["test_*.py", "*_test.py"]
+
+# Паттерны для поиска классов с тестами
+python_classes = ["Test*"]
+
+# Паттерны для поиска функций с тестами
+python_functions = ["test_*"]
+
+# Дополнительные опции
+addopts = [
+    "-v",                    # подробный вывод
+    "--tb=short",           # короткий traceback
+    "--strict-markers",     # строгая проверка маркеров
+    "--disable-warnings",   # отключить предупреждения
+    "--color=yes",          # цветной вывод
+    # Playwright defaults
+    "--browser=chromium",
+    "--tracing=retain-on-failure",
+    "--screenshot=only-on-failure",
+    "--video=retain-on-failure",
+    "--slowmo=400",
+    "--headed"
+]
+
+# Автоматический режим asyncio для всех тестов
+asyncio_mode = "auto"
+
+# Минимальная версия pytest
+minversion = "8.0"
+
+# Маркеры для тестов
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "e2e: End-to-end tests",
+    "slow: Slow running tests",
+    # Playwright markers
+    "only_browser(name): Run test only on specified browser",
+    "skip_browser(name): Skip test on specified browser",
+    "browser_context_args(**kwargs): Override context args for this test",
+]
+
