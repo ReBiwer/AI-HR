@@ -23,8 +23,8 @@ class MyHHClient(HHClient):
     async def get_me(self) -> Dict[str, Any]:
         return (await self._request("GET", f"/me")).json()
 
-    async def get_resume_from_url(self, url: str, subject: Optional[Subject] = None) -> Dict[str, Any]:
-        headers = self._auth_headers(subject=subject)
+    async def get_resumes_from_url(self, url: str, subject: Optional[Subject] = None) -> Dict[str, Any]:
+        headers = await self._auth_headers(subject=subject)
         return (await self._client.request("GET", url, headers=headers)).json()
 
 
@@ -45,7 +45,8 @@ class HHService(IHHService):
         )
         self.hh_client = MyHHClient(self._hh_tm, subject=app_settings.HH_FAKE_SUBJECT)
 
-    def _serialize_data_user(self, data: dict) -> UserEntity:
+    @staticmethod
+    def _serialize_data_user(data: dict) -> UserEntity:
         """
         Сериализация данных пользователя возвращаемых из API hh.ru
         :param data: пример возвращаемых данных можно посмотреть тут: https://api.hh.ru/openapi/redoc#tag/Informaciya-o-soiskatele
@@ -57,8 +58,6 @@ class HHService(IHHService):
             "last_name": data["last_name"],
             "phone": data["phone"],
             "email": data["email"] if data["email"] else None,
-            # Ключ resume_data добавлен ранее, отдельным запросом
-            "resume": self._serialize_data_resume(data["resume_data"])
         }
         return UserEntity.model_validate(user_data)
 
@@ -143,9 +142,6 @@ class HHService(IHHService):
 
     async def get_me(self) -> UserEntity:
         user_data = await self.hh_client.get_me()
-        resume_url = user_data["resumes_url"]
-        resume_data = await self.hh_client.get_resume_from_url(resume_url)
-        user_data["resume_data"] = resume_data
         return self._serialize_data_user(user_data)
 
     def get_auth_url(self, state: str):
