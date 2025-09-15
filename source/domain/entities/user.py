@@ -8,6 +8,6 @@ class UserEntity(BaseEntity):
     name: str
     mid_name: str | None = None
     last_name: str
-    phone: str
+    phone: str | None = None
     email: EmailStr | None = None
     resume: ResumeEntity | None = None
