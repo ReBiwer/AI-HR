@@ -8,11 +8,11 @@ from source.infrastructure.settings.app import app_settings
 
 class StateManager(IStateManager):
 
-    async def state_converter(self, state, request: Request) -> URL:
+    async def state_converter(self, state, payload: str, request: Request) -> URL:
         if state == "telegram":
             username_bot = (await Bot(app_settings.BOT_TOKEN).get_me()).username
-            bot_link = create_deep_link(username_bot, link_type="start", payload="redirect")
+            bot_link = create_deep_link(username_bot, link_type="start", payload=payload)
             return bot_link
 
-        redirect_link = request.url_for(state)
+        redirect_link = request.url_for(state, payload=payload)
         return redirect_link.path
