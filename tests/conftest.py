@@ -1,0 +1,35 @@
+import pytest
+from playwright.sync_api import Page
+from pydantic_settings import BaseSettings
+
+from source.infrastructure.settings.test import TestAppSettings, test_app_settings
+
+
+@pytest.fixture(scope="session")
+def browser_context_args(browser_context_args):
+    return {
+        **browser_context_args,
+        "viewport": {"width": 1440, "height": 900},
+        "locale": "ru-RU",
+        "timezone_id": "Europe/Moscow",
+        "ignore_https_errors": True,
+        # Примеры дополнительных опций при необходимости:
+        # "color_scheme": "dark",
+        # "geolocation": {"latitude": 55.751244, "longitude": 37.618423},
+        # "permissions": ["geolocation"],
+        # "storage_state": "state.json",
+    }
+
+
+@pytest.fixture(autouse=True)
+def _tune_playwright_timeouts(request) -> None:
+    """Применяет таймауты только для тестов, использующих фикстуру `page`."""
+    if "page" in getattr(request, "fixturenames", ()):  # не трогаем тесты без Playwright
+        page: Page = request.getfixturevalue("page")
+        page.set_default_timeout(5000)
+        page.set_default_navigation_timeout(15000)
+
+
+@pytest.fixture()
+def test_settings() -> TestAppSettings:
+    return test_app_settings
