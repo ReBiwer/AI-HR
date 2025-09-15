@@ -38,5 +38,5 @@ class UseCasesProviders(Provider):
         return GenerateResponseUseCase(hh_service, ai_service)
 
     @provide
-    def get_oauth_hh_use_case(self, hh_service: IHHService) -> OAuthHHUseCase:
-        return OAuthHHUseCase(hh_service)
+    def get_oauth_hh_use_case(self, hh_service: IHHService, state_manager: IStateManager) -> OAuthHHUseCase:
+        return OAuthHHUseCase(hh_service, state_manager)
