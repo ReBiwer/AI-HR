@@ -53,6 +53,7 @@ class HHService(IHHService):
         :return: UserEntity
         """
         user_data = {
+            "id": data["id"],
             "name": data["first_name"],
             "mid_name": data["mid_name"],
             "last_name": data["last_name"],
