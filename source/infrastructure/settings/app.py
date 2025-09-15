@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class AppSettings(BaseSettings):
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent.parent
+    BOT_TOKEN: str
     BACKEND_PORT: int
     # Настройки для работы с API hh.ru
     HH_CLIENT_ID: str
