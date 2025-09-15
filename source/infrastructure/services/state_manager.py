@@ -10,8 +10,8 @@ class StateManager(IStateManager):
 
     async def state_converter(self, state, request: Request) -> URL:
         if state == "telegram":
-            name_bot = str(await Bot(app_settings.BOT_TOKEN).get_my_name())
-            bot_link = create_deep_link(name_bot, link_type="start", payload="redirect")
+            username_bot = (await Bot(app_settings.BOT_TOKEN).get_me()).username
+            bot_link = create_deep_link(username_bot, link_type="start", payload="redirect")
             return bot_link
 
         redirect_link = request.url_for(state)
