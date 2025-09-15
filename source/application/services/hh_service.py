@@ -8,6 +8,7 @@ from source.domain.entities.vacancy import VacancyEntity
 from source.domain.entities.employer import EmployerEntity
 from source.domain.entities.resume import ResumeEntity
 from source.domain.entities.response import ResponseToVacancyEntity
+from source.domain.entities.user import UserEntity
 
 
 class AuthTokens(TypedDict):
@@ -22,6 +23,11 @@ class IHHService(ABC):
         pattern = r"/https?:\/\/[^\/]+\.hh\.ru\/vacancy\/(\d+)/gm"
         match = re.search(pattern, url)
         return match.group(1)
+
+    @abstractmethod
+    async def get_me(self) -> UserEntity:
+        """Метод возвращает информацию о залогиненным пользователе"""
+        ...
 
     @abstractmethod
     def get_auth_url(self, state: str) -> str:
