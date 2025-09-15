@@ -10,4 +10,4 @@ class UserEntity(BaseEntity):
     last_name: str
     phone: str
     email: EmailStr | None = None
-    resume: ResumeEntity
+    resume: ResumeEntity | None = None
