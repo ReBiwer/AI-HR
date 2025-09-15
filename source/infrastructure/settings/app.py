@@ -6,6 +6,9 @@ class AppSettings(BaseSettings):
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent.parent
     BOT_TOKEN: str
     BACKEND_PORT: int
+    # JWT настройки
+    JWT_TOKEN: str
+    JWT_ALG: str = "HS256"
     # Настройки для работы с API hh.ru
     HH_CLIENT_ID: str
     HH_CLIENT_SECRET: str
