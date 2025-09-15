@@ -5,7 +5,7 @@ from dishka import FromDishka
 from dishka.integrations.fastapi import DishkaRoute
 
 from source.application.services.hh_service import IHHService
-from source.application.services.state_manager import IStateManager
+from source.application.use_cases.auth_hh import OAuthHHUseCase
 
 router = APIRouter(
     prefix="/auth",
@@ -38,8 +38,7 @@ async def get_oauth_url(
 )
 async def get_tokens(
         request: Request,
-        hh_service: FromDishka[IHHService],
-        state_manager: FromDishka[IStateManager],
+        use_case: FromDishka[OAuthHHUseCase],
         code: Annotated[str, Query(description="Код авторизации от HeadHunter")],
         state: Annotated[str, Query(description="Состояние переданное для возврата после авторизации")],
 ) -> RedirectResponse:
@@ -47,15 +46,13 @@ async def get_tokens(
     Эндпоинт для получения токенов после OAuth редиректа от HeadHunter.
 
     :param request: Объект запроса для получения redirect_url по имени (state)
-    :param hh_service: Сервис для работы с hh.ru
-    :param state_manager: Сервис для создания url'ов для редиректа
+    :param use_case: Use case, где описан процесс авторизации (получения токенов и url для редиректа)
     :param code: Обязательный код авторизации, который HeadHunter передает в query параметрах
     :param state: Обязательное состояние для редиректа после получения токенов
     :return:
     """
     try:
-        redirect_url = await state_manager.state_converter(state, request)
-        tokens = await hh_service.auth(code)
+        redirect_url, tokens = await use_case(code, state, request)
         response = RedirectResponse(redirect_url)
         response.set_cookie("access_token", value=tokens["access_token"])
         response.set_cookie("refresh_token", value=tokens["refresh_token"])
