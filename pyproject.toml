@@ -17,6 +17,7 @@ dependencies = [
     "langgraph>=0.6.6",
     "pytest>=8.4.1",
     "pytest-asyncio>=0.24.0",
+    "pytest-mock>=3.15.0",
     "pytest-playwright-asyncio>=0.7.1",
     "python-jose[cryptography]>=3.5.0",
     "uvicorn>=0.32.0",
@@ -42,18 +43,19 @@ python_functions = ["test_*"]
 
 # Дополнительные опции
 addopts = [
-    "-v",                    # подробный вывод
-    "--tb=short",           # короткий traceback
-    "--strict-markers",     # строгая проверка маркеров
-    "--disable-warnings",   # отключить предупреждения
-    "--color=yes",          # цветной вывод
+    "-v",                               # подробный вывод
+    "-s",                               # отоброжение print'ов
+    "--tb=short",                       # короткий traceback
+    "--strict-markers",                 # строгая проверка маркеров
+    "--disable-warnings",               # отключить предупреждения
+    "--color=yes",                      # цветной вывод
     # Playwright defaults
     "--browser=chromium",
     "--tracing=retain-on-failure",
     "--screenshot=only-on-failure",
     "--video=retain-on-failure",
     "--slowmo=400",
-    "--headed"
+#    "--headed"                         # открывать браузер или нет
 ]
 
 # Автоматический режим asyncio для всех тестов
