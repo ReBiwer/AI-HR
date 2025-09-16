@@ -4,7 +4,7 @@ from fastapi.responses import RedirectResponse
 from dishka import FromDishka
 from dishka.integrations.fastapi import DishkaRoute
 
-from source.application.services.hh_service import IHHService
+from source.application.services.hh_service import IHHService, AuthTokens
 from source.application.use_cases.auth_hh import OAuthHHUseCase
 
 router = APIRouter(
@@ -69,3 +69,23 @@ async def get_tokens(
             status_code=500,
             detail=f"Внутренняя ошибка сервера: {str(e)}"
         )
+
+
+@router.get(
+    "/hh/tokens/test",
+    name="test_tokens"
+)
+async def get_tokens_for_test(
+        code: Annotated[str, Query(description="Код авторизации от HeadHunter")],
+        state: Annotated[str, Query(description="Состояние переданное для возврата после авторизации")],
+        hh_service: FromDishka[IHHService],
+) -> AuthTokens:
+    """
+    Тестовая ручка для получения токенов авторизации
+    :param code: код авторизации
+    :param state: переданное состояние для редиректа
+    :param hh_service: сервис для работы с API hh.ru
+    :return:
+    """
+    tokens = await hh_service.auth(code)
+    return tokens
