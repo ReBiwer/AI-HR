@@ -1,11 +1,13 @@
 from typing import Annotated
-from fastapi import APIRouter, Query, HTTPException, Request
+from fastapi import APIRouter, Query, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from dishka import FromDishka
 from dishka.integrations.fastapi import DishkaRoute
+from starlette.routing import NoMatchFound
 
 from source.application.services.hh_service import IHHService, AuthTokens
 from source.application.use_cases.auth_hh import OAuthHHUseCase
+from source.infrastructure.settings.app import app_settings
 
 router = APIRouter(
     prefix="/auth",
@@ -52,7 +54,7 @@ async def get_tokens(
     :return:
     """
     try:
-        redirect_url, tokens = await use_case(code, state, request)
+        redirect_url, tokens = await use_case(code, state, request, app_settings.HH_FAKE_SUBJECT)
         response = RedirectResponse(redirect_url)
         response.set_cookie("access_token", value=tokens["access_token"])
         response.set_cookie("refresh_token", value=tokens["refresh_token"])
@@ -60,14 +62,13 @@ async def get_tokens(
     except ConnectionError as e:
         # Ошибки соединения с API HeadHunter
         raise HTTPException(
-            status_code=503,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Сервис HeadHunter временно недоступен. Попробуйте позже."
         )
-    except Exception as e:
-        # Общие ошибки
+    except NoMatchFound as e:
         raise HTTPException(
-            status_code=500,
-            detail=f"Внутренняя ошибка сервера: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Не корректно передан {state=}. Детали ошибки: {e}"
         )
 
 
@@ -76,16 +77,23 @@ async def get_tokens(
     name="test_tokens"
 )
 async def get_tokens_for_test(
-        code: Annotated[str, Query(description="Код авторизации от HeadHunter")],
-        state: Annotated[str, Query(description="Состояние переданное для возврата после авторизации")],
         hh_service: FromDishka[IHHService],
+        request: Request,
+        code: Annotated[str, Query(description="Код авторизации от HeadHunter")] = None,
+        state: Annotated[str, Query(description="Состояние переданное для возврата после авторизации")] = None,
 ) -> AuthTokens:
     """
     Тестовая ручка для получения токенов авторизации
     :param code: код авторизации
+    :param request: объект Request
     :param state: переданное состояние для редиректа
     :param hh_service: сервис для работы с API hh.ru
     :return:
     """
-    tokens = await hh_service.auth(code)
-    return tokens
+    if code:
+        return await hh_service.auth(code)
+
+    return AuthTokens(
+        access_token=request.cookies.get("access_token"),
+        refresh_token=request.cookies.get("refresh_token")
+    )
