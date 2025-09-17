@@ -1,6 +1,6 @@
 import re
 import asyncio
-from typing import TypedDict
+from typing import TypedDict, Union
 from abc import ABC, abstractmethod
 
 from source.application.services.ai_service import GenerateResponseData
@@ -25,7 +25,7 @@ class IHHService(ABC):
         return match.group(1)
 
     @abstractmethod
-    async def get_me(self) -> UserEntity:
+    async def get_me(self, subject: Union[int, str]) -> UserEntity:
         """Метод возвращает информацию о залогиненным пользователе"""
         ...
 
