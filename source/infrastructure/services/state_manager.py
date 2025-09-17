@@ -16,5 +16,5 @@ class StateManager(IStateManager):
             bot_link = create_deep_link(username_bot, link_type="start", payload=payload, encode=True)
             return bot_link
 
-        redirect_link = request.url_for(state, payload=payload)
+        redirect_link = request.url_for(state)
         return redirect_link.path
