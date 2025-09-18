@@ -1,6 +1,5 @@
 import asyncio
 from typing import Optional, Dict, Any
-from fake_useragent import UserAgent
 from hh_api.auth.keyed_stores import InMemoryKeyedTokenStore
 from hh_api.auth.token_manager import OAuthConfig
 from hh_api.client import HHClient, TokenManager, Subject
@@ -18,14 +17,33 @@ from source.domain.entities.resume import ResumeEntity, ContactEntity, Experienc
 class MyHHClient(HHClient):
 
     async def get_employer(self, employer_id: str, *, subject: Optional[Subject] = None) -> Dict[str, Any]:
-        return (await self._request("GET", f"/employers/{employer_id}", subject=subject)).json()
+        return (await self._request(
+            "GET",
+            f"/employers/{employer_id}",
+            subject=subject,
+        )).json()
 
-    async def get_me(self) -> Dict[str, Any]:
-        return (await self._request("GET", f"/me")).json()
+    async def get_me(self, subject: Optional[Subject] = None) -> Dict[str, Any]:
+        return (await self._request(
+            "GET",
+            "/me",
+            subject=subject,
+        )).json()
 
     async def get_resumes_from_url(self, url: str, subject: Optional[Subject] = None) -> Dict[str, Any]:
-        headers = await self._auth_headers(subject=subject)
-        return (await self._client.request("GET", url, headers=headers)).json()
+        return (await self._request(
+            "GET",
+            url,
+            subject=subject,
+        )).json()
+
+    async def get_vacancies(self, subject: Optional[Subject], **filter_query) -> Dict[str, Any]:
+        return (await self._request(
+            "GET",
+            path="/vacancies",
+            subject=subject,
+            params=filter_query
+        )).json()
 
 
 class HHService(IHHService):
@@ -34,9 +52,10 @@ class HHService(IHHService):
         self._oath_config = OAuthConfig(
             client_id=app_settings.HH_CLIENT_ID,
             client_secret=app_settings.HH_CLIENT_SECRET,
-            redirect_uri=app_settings.HH_REDIRECT_URI
+            redirect_uri=app_settings.HH_REDIRECT_URI,
+            token_url="https://api.hh.ru/token"
         )
-        self._user_agent = UserAgent().chrome
+        self._user_agent = "AI HR/1.0 (bykov100898@yandex.ru)"
         self._keyed_store = InMemoryKeyedTokenStore()
         self._hh_tm = TokenManager(
             config= self._oath_config,
@@ -73,10 +92,7 @@ class HHService(IHHService):
             "id": data["id"],
             "url_vacancy": data["alternate_url"],
             "name": data["name"],
-            "experience": {
-                Experience(id=exp['id'], name=exp['name'])
-                for exp in data["experience"]
-            },
+            "experience": Experience(id=data["experience"]['id'], name=data["experience"]['name']),
             "description": data["description"],
             "key_skills": data["key_skills"],
             "employer_id": data["employer"]["id"]
@@ -141,7 +157,7 @@ class HHService(IHHService):
         return ResponseToVacancyEntity.model_validate(response_data)
 
 
-    async def get_me(self) -> UserEntity:
+    async def get_me(self, subject: Optional[Subject]) -> UserEntity:
         user_data = await self.hh_client.get_me()
         return self._serialize_data_user(user_data)
 
@@ -151,6 +167,13 @@ class HHService(IHHService):
     async def auth(self, code: str) -> AuthTokens:
         tokens = await self._hh_tm.exchange_code(app_settings.HH_FAKE_SUBJECT, code=code)
         return AuthTokens(access_token=tokens.access_token, refresh_token=tokens.refresh_token)
+
+    async def get_vacancies(self, subject: Optional[Subject], **filter_query) -> list[VacancyEntity]:
+        vacancies = await self.hh_client.get_vacancies(subject, **filter_query)
+        result = await asyncio.gather(
+            *[self.get_vacancy_data(vacancy["id"]) for vacancy in vacancies["items"]]
+        )
+        return result
 
     async def get_vacancy_data(self, vacancy_id: str) -> VacancyEntity:
         data = await self.hh_client.get_vacancy(vacancy_id)
