@@ -62,10 +62,9 @@ class HHService(IHHService):
             store=self._keyed_store,
             user_agent=self._user_agent
         )
-        self.hh_client = MyHHClient(self._hh_tm, subject=app_settings.HH_FAKE_SUBJECT)
+        self.hh_client = MyHHClient(self._hh_tm)
 
-    @staticmethod
-    def _serialize_data_user(data: dict) -> UserEntity:
+    def _serialize_data_user(self, data: dict) -> UserEntity:
         """
         Сериализация данных пользователя возвращаемых из API hh.ru
         :param data: пример возвращаемых данных можно посмотреть тут: https://api.hh.ru/openapi/redoc#tag/Informaciya-o-soiskatele
@@ -78,6 +77,10 @@ class HHService(IHHService):
             "last_name": data["last_name"],
             "phone": data["phone"],
             "email": data["email"] if data["email"] else None,
+            "resumes": [
+                self._serialize_data_resume(data)
+                for data in data["resumes_data"]
+            ]
         }
         return UserEntity.model_validate(user_data)
 
@@ -152,13 +155,26 @@ class HHService(IHHService):
             # ключ-значение message было добавлено отдельно
             # схема получения находится тут
             # https://api.hh.ru/openapi/redoc#tag/Perepiska-(otklikipriglasheniya)-dlya-soiskatelya/operation/get-negotiation-messages
-            "message": data["message"]
+            "message": data["message"] if data["message"] else "",
+            "quality": True,
         }
         return ResponseToVacancyEntity.model_validate(response_data)
 
 
     async def get_me(self, subject: Optional[Subject]) -> UserEntity:
-        user_data = await self.hh_client.get_me()
+        user_data = await self.hh_client.get_me(subject=subject)
+
+        resumes_data = await self.hh_client.get_resumes_from_url(
+            "/resumes/mine",
+            subject=subject
+        )
+        # отдельный запрос делается, для подгрузки description
+        # почему-то при загрузке всех резюме этого поля нет
+        valid_resumes_data = await asyncio.gather(*[
+            self.hh_client.get_resume(data["id"], subject=subject)
+            for data in resumes_data["items"]
+        ])
+        user_data["resumes_data"] = valid_resumes_data
         return self._serialize_data_user(user_data)
 
     def get_auth_url(self, state: str):
@@ -176,37 +192,67 @@ class HHService(IHHService):
         return result
 
     async def get_vacancy_data(self, vacancy_id: str) -> VacancyEntity:
-        data = await self.hh_client.get_vacancy(vacancy_id)
+        data = await self.hh_client.get_vacancy(vacancy_id, subject=app_settings.HH_FAKE_SUBJECT)
         return self._serialize_data_vacancy(data)
 
     async def get_employer_data(self, employer_id: str) -> EmployerEntity:
-        data = await self.hh_client.get_employer(employer_id)
+        data = await self.hh_client.get_employer(employer_id, subject=app_settings.HH_FAKE_SUBJECT)
         return self._serialize_data_employer(data)
 
     async def get_resume_data(self, resume_id: str) -> ResumeEntity:
-        data = await self.hh_client.get_resume(resume_id)
+        data = await self.hh_client.get_resume(resume_id, subject=app_settings.HH_FAKE_SUBJECT)
         return self._serialize_data_resume(data)
 
     async def get_good_responses(self, quantity_responses: int = 10) -> list[ResponseToVacancyEntity]:
-        data = (await self.hh_client._request(
-            "GET",
-            "/negotiations",
-            params={"status": "invitations"}
-        )).json()
+        cur_page = 0
+        invitations_responses = []
+        # запрашиваем отклики у которых статус interview/собеседование
+        while len(invitations_responses) != quantity_responses:
+            try:
+                coro_request = self.hh_client._request(
+                    "GET",
+                    "/negotiations",
+                    # фильтрация по статус invitations/Активные приглашения не работает
+                    # либо у меня нет таких откликов, либо нужно использовать другой статус (я его не нашел)
+                    params={"status": "active", "per_page": quantity_responses, "page": cur_page},
+                    subject=app_settings.HH_FAKE_SUBJECT
+                )
+                data = (await asyncio.wait_for(coro_request, timeout=100)).json()
+                for item in data["items"]:
+                    # в список добавляются только те отклики, у которых статус interview/собеседование
+                    # и если список уже добавленных откликов не превышает переданный лимит
+                    if item["state"]["id"] == "interview" and len(invitations_responses) < quantity_responses:
+                        invitations_responses.append(item)
+                    # если длина собранных откликов уже соответствует, то останавливаем цикл
+                    elif len(invitations_responses) == quantity_responses:
+                        break
+                cur_page += 1
+            except asyncio.exceptions.TimeoutError:
+                # если выходит исключение, то новых откликов больше нет
+                break
 
         # создаем корутины для подгрузки сообщений откликов
         load_messages = [
-            self.hh_client._request("GET", f"/negotiations/{response['id']}/messages")
-            for response in data["items"]
+            self.hh_client._request(
+                "GET",
+                f"/negotiations/{response['id']}/messages",
+                subject=app_settings.HH_FAKE_SUBJECT
+            )
+            for response in invitations_responses
         ]
         # конкурентно выполняем каждый запрос на подгрузку сообщений
-        messages = await asyncio.gather(*load_messages)
+        messages: list = await asyncio.gather(*load_messages)
         # добавляем отклик (первое сообщение в переписке) в список
-        for response, mess in zip(data["items"], messages):
-            response["message"] = mess["items"][-1]["text"]
+        for response, mess in zip(invitations_responses, messages):
+            mess_data = mess.json()
+            if mess_data["items"][0]["author"]["participant_type"] == "employer":
+                del invitations_responses[invitations_responses.index(response)]
+                del messages[messages.index(mess)]
+                continue
+            response["message"] = mess_data["items"][0]["text"]
         return [
             self._serialize_data_response_to_vacancy(response)
-            for response in data["items"]
+            for response in invitations_responses
         ]
 
     async def get_user_rules(self) -> dict:
