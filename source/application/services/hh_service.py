@@ -35,33 +35,33 @@ class IHHService(ABC):
         ...
 
     @abstractmethod
-    async def auth(self, code: str) -> AuthTokens:
+    async def auth(self, code: str, subject: Union[int, str]) -> AuthTokens:
         """Метод для авторизации, принимает код полученный после редиректа
          возвращает словарь с access и refresh токенами"""
         ...
 
     @abstractmethod
-    async def get_vacancy_data(self, vacancy_id: str) -> VacancyEntity:
+    async def get_vacancy_data(self, vacancy_id: str, subject: Union[int, str]) -> VacancyEntity:
         """Метод для получения информации о вакансии"""
         ...
 
     @abstractmethod
-    async def get_employer_data(self, employer_id: str) -> EmployerEntity:
+    async def get_employer_data(self, employer_id: str, subject: Union[int, str]) -> EmployerEntity:
         """Метод для получения информации о работодателе"""
         ...
 
     @abstractmethod
-    async def get_resume_data(self, resume_id: str) -> ResumeEntity:
+    async def get_resume_data(self, resume_id: str, subject: Union[int, str]) -> ResumeEntity:
         """Метод для получения информации из резюме авторизованного пользователя"""
         ...
 
     @abstractmethod
-    async def get_good_responses(self, quantity_responses: int = 10) -> list[ResponseToVacancyEntity]:
+    async def get_good_responses(self, subject: Union[int, str], quantity_responses: int = 10) -> list[ResponseToVacancyEntity]:
         """Метод для получения определенного количества удачных откликов"""
         ...
 
     @abstractmethod
-    async def get_user_rules(self) -> dict:
+    async def get_user_rules(self, subject: Union[int, str]) -> dict:
         """Метод для получения правил пользователя для формирования отклика"""
         ...
 
@@ -70,11 +70,12 @@ class IHHService(ABC):
             self,
             vacancy_id: str,
             resume_id: str,
+            subject: Union[int, str],
     ) -> GenerateResponseData:
         """Метод для сбора всех данных для отправки в llm для генерации отклика"""
         ...
 
     @abstractmethod
-    async def send_response_to_vacancy(self, response: ResponseToVacancyEntity) -> bool:
+    async def send_response_to_vacancy(self, response: ResponseToVacancyEntity, subject: Union[int, str]) -> bool:
         """Метод для отправки отклика на вакансию"""
         ...
