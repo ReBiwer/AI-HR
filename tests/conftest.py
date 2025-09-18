@@ -1,8 +1,7 @@
 import pytest
 from playwright.sync_api import Page
-from pydantic_settings import BaseSettings
 
-from source.infrastructure.settings.test import TestAppSettings, test_app_settings
+from source.infrastructure.settings.test import TestAppSettings
 
 
 @pytest.fixture(scope="session")
@@ -30,6 +29,6 @@ def _tune_playwright_timeouts(request) -> None:
         page.set_default_navigation_timeout(15000)
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def test_settings() -> TestAppSettings:
-    return test_app_settings
+    return TestAppSettings()
