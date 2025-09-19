@@ -1,3 +1,5 @@
+import openai
+from typing import Iterable
 from pydantic import BaseModel
 from langchain.prompts import PromptTemplate
 from langchain_core.messages import HumanMessage
@@ -21,7 +23,16 @@ class AIServiceState(BaseModel):
     employer: EmployerEntity
     good_responses: list[ResponseToVacancyEntity]
     user_rules: dict
-    response: str | None
+    response: str | None = None
+
+    def state_dict(self) -> dict:
+        state_dict = {}
+        for key, value in self.__dict__.items():
+            if value:
+                state_dict[key] = value
+            elif isinstance(value, Iterable):
+                state_dict[key] = ', '.join([str(item) for item in value])
+        return state_dict
 
 
 class AIService(IAIService):
@@ -29,7 +40,7 @@ class AIService(IAIService):
     def __init__(self):
         self.llm = ChatOpenAI(
             model=app_settings.OPENAI_MODEL,
-            temperature=0,
+            temperature=0.7,
             api_key=app_settings.OPENROUTER_API_KEY,
             base_url=app_settings.OPENROUTER_BASE_URL
         )
@@ -43,15 +54,15 @@ class AIService(IAIService):
         workflow.add_edge("start", END)
         return workflow.compile()
 
-    async def _start_node(self, state: AIServiceState) -> AIServiceState:
+    async def _start_node(self, state: AIServiceState) -> dict[str, str]:
         prompt = PromptTemplate(
             input_variables=["vacancy", "resume", "employer", "good_responses", "user_rules"],
             template="""
             Ты мой помощник в написании сопроводительных писем. 
             Тебе нужно составить сопроводительное опираясь на: \n
             
-            1. мое резюме {resume};
-            2. мои правила по составлению сопроводительного {user_rules};
+            1. мое резюме {resume};\n
+            2. мои правила по составлению сопроводительного {user_rules};\n
             3. мои удачные отклики {good_responses}.\n
             
             На эту вакансию нужно составить сопроводительное: {vacancy}
@@ -59,10 +70,13 @@ class AIService(IAIService):
             опираясь на информацию из вакансии и описание работодателя. Вот описание: {employer}            
             """
         )
-        message = HumanMessage(content=prompt.format(**state.model_dump()))
-        response = await self.llm.ainvoke([message])
-        state.response = response.text()
-        return state
+        message = HumanMessage(content=prompt.format(**state.state_dict()))
+        try:
+            response = await self.llm.ainvoke([message])
+            return {"response": response.text()}
+        except openai.NotFoundError as e:
+            print(f"Ошибка отправки промтпа: {e}")
+            raise
 
     async def generate_response(
             self,
@@ -71,8 +85,8 @@ class AIService(IAIService):
         start_state = AIServiceState.model_validate(data)
         result = await self._workflow.ainvoke(start_state)
         return ResponseToVacancyEntity(
-            url_vacancy=result.vacancy.url_vacancy,
-            vacancy_id=result.vacancy.id,
-            resume_id=result.resume.id,
-            message=result.response,
+            url_vacancy=result["vacancy"].url_vacancy,
+            vacancy_id=result["vacancy"].id,
+            resume_id=result["resume"].id,
+            message=result["response"],
         )
