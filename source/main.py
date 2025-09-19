@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
 from source.presentation.api.auth import router as auth_router
+from source.presentation.api.ai import router as ai_router
 from source.infrastructure.settings.app import app_settings
 from source.infrastructure.di import init_di_container
 
@@ -22,6 +23,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(auth_router)
+    app.include_router(ai_router)
     init_di_container(app)
 
     return app
