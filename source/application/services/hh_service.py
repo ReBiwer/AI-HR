@@ -20,7 +20,7 @@ class IHHService(ABC):
 
     @staticmethod
     def extract_vacancy_id_from_url(url: str) -> str:
-        pattern = r"/https?:\/\/[^\/]+\.hh\.ru\/vacancy\/(\d+)/gm"
+        pattern = r"\/vacancy\/(?P<id>\d+)(?=[\/?#]|$)"
         match = re.search(pattern, url)
         return match.group(1)
 
