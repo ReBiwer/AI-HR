@@ -4,7 +4,7 @@ from pydantic import EmailStr, BaseModel
 from source.domain.entities.base import BaseEntity
 
 
-class ExperienceEntity(BaseModel):
+class JobExperienceEntity(BaseModel):
     company: str
     position: str
     start: datetime
@@ -29,7 +29,7 @@ class ContactEntity(BaseModel):
 class ResumeEntity(BaseEntity):
     name: str
     surname: str
-    job_description: list[ExperienceEntity]
+    job_description: list[JobExperienceEntity]
     skills: set[str]
     contacts: ContactEntity
 

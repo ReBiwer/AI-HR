@@ -11,7 +11,7 @@ from source.domain.entities.vacancy import Experience, VacancyEntity
 from source.infrastructure.settings.app import app_settings
 from source.application.services.hh_service import IHHService, AuthTokens
 from source.domain.entities.response import ResponseToVacancyEntity
-from source.domain.entities.resume import ResumeEntity, ContactEntity, ExperienceEntity
+from source.domain.entities.resume import ResumeEntity, ContactEntity, JobExperienceEntity
 
 
 class MyHHClient(HHClient):
@@ -132,7 +132,7 @@ class HHService(IHHService):
             "name": data["first_name"],
             "surname": data["last_name"],
             "job_description": [
-                ExperienceEntity.model_validate(experience)
+                JobExperienceEntity.model_validate(experience)
                 for experience in data["experience"]
             ],
             "skills": data["skill_set"],
