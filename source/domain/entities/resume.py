@@ -18,20 +18,13 @@ class JobExperienceEntity(BaseModel):
                 f"Описание: {self.description}")
 
 
-class ContactEntity(BaseModel):
-    phone: str
-    email: EmailStr
-
-    def __str__(self):
-        return f"телефон: {self.phone}, email: {self.email}"
-
-
 class ResumeEntity(BaseEntity):
     name: str
     surname: str
     job_experience: list[JobExperienceEntity]
     skills: set[str]
-    contacts: ContactEntity
+    contact_phone: str
+    contact_email: EmailStr
 
     def __str__(self):
         job_experience = '\n'.join([
@@ -41,4 +34,4 @@ class ResumeEntity(BaseEntity):
         return (f"Имя: {self.name}, фамилия: {self.surname}\n"
                 f"Опыт работы: {job_experience}\n"
                 f"Навыки: {', '.join(self.skills)}\n"
-                f"Контакты: {self.contacts}")
+                f"Контакты: телефон {self.contact_phone}, email {self.contact_email}")

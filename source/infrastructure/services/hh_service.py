@@ -11,7 +11,7 @@ from source.domain.entities.vacancy import Experience, VacancyEntity
 from source.infrastructure.settings.app import app_settings
 from source.application.services.hh_service import IHHService, AuthTokens
 from source.domain.entities.response import ResponseToVacancyEntity
-from source.domain.entities.resume import ResumeEntity, ContactEntity, JobExperienceEntity
+from source.domain.entities.resume import ResumeEntity, JobExperienceEntity
 
 
 class MyHHClient(HHClient):
@@ -123,10 +123,6 @@ class HHService(IHHService):
         :param data: пример возвращаемых данных можно посмотреть тут: https://api.hh.ru/openapi/redoc#tag/Rezyume.-Prosmotr-informacii/operation/get-resume
         :return: ResumeEntity
         """
-        contact_data = {
-            f"{contact['kind']}": contact['contact_value']
-            for contact in data["contact"]
-        }
         resume_data = {
             "id": data["id"],
             "name": data["first_name"],
@@ -136,7 +132,8 @@ class HHService(IHHService):
                 for experience in data["experience"]
             ],
             "skills": data["skill_set"],
-            "contacts": ContactEntity.model_validate(contact_data)
+            "contact_phone": data["contact"]["phone"],
+            "contact_email": data["contact"]["email"],
         }
         return ResumeEntity.model_validate(resume_data)
 
