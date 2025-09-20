@@ -29,14 +29,14 @@ class ContactEntity(BaseModel):
 class ResumeEntity(BaseEntity):
     name: str
     surname: str
-    job_description: list[JobExperienceEntity]
+    job_experience: list[JobExperienceEntity]
     skills: set[str]
     contacts: ContactEntity
 
     def __str__(self):
         job_experience = '\n'.join([
             str(experience)
-            for experience in self.job_description
+            for experience in self.job_experience
         ])
         return (f"Имя: {self.name}, фамилия: {self.surname}\n"
                 f"Опыт работы: {job_experience}\n"
