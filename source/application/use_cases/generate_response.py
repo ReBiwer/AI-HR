@@ -12,6 +12,6 @@ class GenerateResponseUseCase:
 
     async def __call__(self, query: QueryCreateDTO) -> ResponseToVacancyEntity:
         vacancy_id = self.hh_service.extract_vacancy_id_from_url(query.url_vacancy)
-        data = await self.hh_service.data_collect_for_llm(vacancy_id, query.resume_id)
+        data = await self.hh_service.data_collect_for_llm(query.user_id, vacancy_id, query.resume_id)
         response = await self.ai_service.generate_response(data)
         return response
