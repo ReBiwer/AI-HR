@@ -8,6 +8,7 @@ from source.domain.entities.employer import EmployerEntity
 
 
 class GenerateResponseData(TypedDict):
+    user_id: int
     vacancy: VacancyEntity
     resume: ResumeEntity
     employer: EmployerEntity | None
@@ -23,4 +24,15 @@ class IAIService(ABC):
             data: GenerateResponseData
     ) -> ResponseToVacancyEntity:
         """Метод для генерации отклика на вакансию"""
+        ...
+
+    @abstractmethod
+    async def regenerate_response(
+            self,
+            user_id: int,
+            response: str,
+            user_comments: str,
+            data: GenerateResponseData | None = None
+    ) -> ResponseToVacancyEntity:
+        """Метод для исправления ранее сгенерированного отклика"""
         ...
