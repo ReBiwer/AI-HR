@@ -4,7 +4,7 @@ from source.application.dtos.query import QueryRecreateDTO
 from source.domain.entities.response import ResponseToVacancyEntity
 
 
-class GenerateResponseUseCase:
+class RegenerateResponseUseCase:
 
     def __init__(self, hh_service: IHHService, ai_service: IAIService):
         self.hh_service = hh_service
