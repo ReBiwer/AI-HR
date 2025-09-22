@@ -5,6 +5,7 @@ from source.domain.entities.base import BaseEntity
 
 
 class UserEntity(BaseEntity):
+    hh_id: str
     name: str
     mid_name: str | None = None
     last_name: str

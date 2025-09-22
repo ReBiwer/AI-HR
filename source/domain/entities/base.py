@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class BaseEntity(BaseModel):
-    id: Union[int, str, None] = None
+    id: Union[int, None] = None
     created_at: datetime = Field(default_factory=datetime.now)
 
     model_config = ConfigDict(from_attributes=True)

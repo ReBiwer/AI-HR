@@ -9,6 +9,7 @@ class Experience(TypedDict):
 
 
 class VacancyEntity(BaseEntity):
+    hh_id: str
     url_vacancy: str
     name: str
     experience: Experience

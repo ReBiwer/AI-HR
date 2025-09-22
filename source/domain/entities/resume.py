@@ -14,11 +14,12 @@ class JobExperienceEntity(BaseModel):
     def __str__(self):
         return (f"Компания: {self.company}\n"
                 f"Позиция: {self.position}\n"
-                f"Начало работы: {self.start}{str(self.end) + '\n' if self.end else '\n'}"
+                f"Начало работы: c {self.start} {f'по {self.end}\n' if self.end else '\n'}"
                 f"Описание: {self.description}")
 
 
 class ResumeEntity(BaseEntity):
+    hh_id: str
     name: str
     surname: str
     job_experience: list[JobExperienceEntity]

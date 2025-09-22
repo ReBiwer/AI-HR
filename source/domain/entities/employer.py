@@ -2,6 +2,7 @@ from source.domain.entities.base import BaseEntity
 
 
 class EmployerEntity(BaseEntity):
+    hh_id: str
     name: str
     description: str
 
