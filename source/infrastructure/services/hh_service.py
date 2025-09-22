@@ -92,7 +92,7 @@ class HHService(IHHService):
         :return: VacancyEntity
         """
         vacancy_data = {
-            "id": data["id"],
+            "hh_id": data["id"],
             "url_vacancy": data["alternate_url"],
             "name": data["name"],
             "experience": Experience(id=data["experience"]['id'], name=data["experience"]['name']),
@@ -110,7 +110,7 @@ class HHService(IHHService):
         :return: EmployerEntity
         """
         employer_data = {
-            "id": data["id"],
+            "hh_id": data["id"],
             "name": data["name"],
             "description": data["description"]
         }
@@ -124,7 +124,7 @@ class HHService(IHHService):
         :return: ResumeEntity
         """
         resume_data = {
-            "id": data["id"],
+            "hh_id": data["id"],
             "name": data["first_name"],
             "surname": data["last_name"],
             "job_description": [
@@ -145,7 +145,7 @@ class HHService(IHHService):
         :return:
         """
         response_data = {
-            "id": data["id"],
+            "hh_id": data["id"],
             "url_vacancy": data["url"],
             "vacancy_id": data["id"],
             "resume_id": data["resume"]["id"],
