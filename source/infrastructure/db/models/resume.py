@@ -12,6 +12,20 @@ if TYPE_CHECKING:
     from .user import UserModel
 
 
+class JobExperienceModel(BaseModel):
+    __tablename__ = "job_experiences"
+
+    resume_id: Mapped[str] = mapped_column(ForeignKey("resumes.id", ondelete="CASCADE"), index=True)
+
+    company: Mapped[str] = mapped_column(String, nullable=False)
+    position: Mapped[str] = mapped_column(String, nullable=False)
+    start: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+
+    resume: Mapped["ResumeModel"] = relationship(back_populates="job_experience", lazy="joined")
+
+
 class ResumeModel(BaseModel):
     __tablename__ = "resumes"
 
@@ -28,24 +42,9 @@ class ResumeModel(BaseModel):
 
     user: Mapped["UserModel"] = relationship(back_populates="resumes", lazy="joined")
 
-    job_experience: Mapped[list["JobExperienceModel"]] = relationship(
+    job_experience: Mapped[list[JobExperienceModel]] = relationship(
         back_populates="resume",
         cascade="all, delete-orphan",
         order_by=lambda: JobExperienceModel.start.asc(),
         lazy="selectin"
     )
-
-
-class JobExperienceModel(BaseModel):
-    __tablename__ = "job_experiences"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    resume_id: Mapped[str] = mapped_column(ForeignKey("resumes.id", ondelete="CASCADE"), index=True)
-
-    company: Mapped[str] = mapped_column(String, nullable=False)
-    position: Mapped[str] = mapped_column(String, nullable=False)
-    start: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    description: Mapped[str] = mapped_column(String, nullable=False)
-
-    resume: Mapped[ResumeModel] = relationship(back_populates="job_experience", lazy="joined")
