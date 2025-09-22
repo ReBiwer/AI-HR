@@ -68,6 +68,7 @@ class IHHService(ABC):
     @abstractmethod
     async def data_collect_for_llm(
             self,
+            user_id: int,
             vacancy_id: str,
             resume_id: str,
     ) -> GenerateResponseData:

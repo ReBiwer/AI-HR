@@ -4,5 +4,11 @@ from source.application.dtos.base import BaseDTO
 
 
 class QueryCreateDTO(BaseDTO):
+    user_id: int
     url_vacancy: str = Field(default="https://usinsk.hh.ru/vacancy/125537679")
     resume_id: str = Field(default="6044a353ff0f1126620039ed1f42324e494b4c")
+
+
+class QueryRecreateDTO(QueryCreateDTO):
+    response: str
+    user_comments: str

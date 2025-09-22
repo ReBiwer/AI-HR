@@ -260,6 +260,7 @@ class HHService(IHHService):
 
     async def data_collect_for_llm(
             self,
+            user_id: int,
             vacancy_id: str,
             resume_id: str,
     ) -> GenerateResponseData:
@@ -272,6 +273,7 @@ class HHService(IHHService):
         ]
         result = await asyncio.gather(*tasks)
         return GenerateResponseData(
+            user_id=user_id,
             vacancy=vacancy_data,
             employer=result[0],
             resume=result[1],
