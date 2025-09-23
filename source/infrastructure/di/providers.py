@@ -23,7 +23,7 @@ class ServicesProviders(Provider):
         return HHService()
 
     @provide
-    async def get_checkpointer(self) -> AsyncGenerator[BaseCheckpointSaver]:
+    async def get_checkpointer(self) -> AsyncGenerator[BaseCheckpointSaver, None]:
         async with AsyncRedisSaver.from_conn_string(
                 app_settings.redis_url,
                 ttl={"default_ttl": app_settings.REDIS_CHECKPOINT_TTL},
