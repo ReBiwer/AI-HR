@@ -77,3 +77,8 @@ markers = [
     "browser_context_args(**kwargs): Override context args for this test",
 ]
 
+[dependency-groups]
+dev = [
+    "pre-commit>=4.3.0",
+    "ruff>=0.13.1",
+]
