@@ -2,11 +2,17 @@ from typing import AsyncGenerator
 from dishka import Provider, Scope, provide
 from langgraph.checkpoint.memory import BaseCheckpointSaver
 from langgraph.checkpoint.redis import AsyncRedisSaver
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from source.infrastructure.db.engine import async_session_maker
 from source.infrastructure.settings.app import app_settings
+from source.infrastructure.db.repositories.user import UserRepository
+from source.infrastructure.db.repositories.resume import ResumeRepository, JobExperienceRepository
 from source.infrastructure.services.hh_service import HHService
 from source.infrastructure.services.ai_service import AIService
 from source.infrastructure.services.state_manager import StateManager
+from source.application.repositories.user import IUserRepository
+from source.application.repositories.resume import IResumeRepository, IJobExperienceRepository
 from source.application.services.hh_service import IHHService
 from source.application.services.ai_service import IAIService
 from source.application.services.state_manager import IStateManager
@@ -62,3 +68,25 @@ class UseCasesProviders(Provider):
     @provide
     def get_oauth_hh_use_case(self, hh_service: IHHService, state_manager: IStateManager) -> OAuthHHUseCase:
         return OAuthHHUseCase(hh_service, state_manager)
+
+
+class RepositoriesProviders(Provider):
+    scope = Scope.REQUEST
+
+    @provide
+    async def get_async_session(self) -> AsyncGenerator[AsyncSession, None]:
+        async with async_session_maker() as session:
+            yield session
+
+    @provide
+    def get_user_repository(self, session: AsyncSession) -> IUserRepository:
+        return UserRepository(session)
+
+    @provide
+    def get_resume_repository(self, session: AsyncSession) -> IResumeRepository:
+        return ResumeRepository(session)
+
+    @provide
+    def get_job_experience_repository(self, session: AsyncSession) -> IJobExperienceRepository:
+        return JobExperienceRepository(session)
+
