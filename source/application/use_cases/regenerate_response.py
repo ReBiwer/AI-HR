@@ -5,7 +5,6 @@ from source.domain.entities.response import ResponseToVacancyEntity
 
 
 class RegenerateResponseUseCase:
-
     def __init__(self, hh_service: IHHService, ai_service: IAIService):
         self.hh_service = hh_service
         self.ai_service = ai_service
@@ -13,9 +12,7 @@ class RegenerateResponseUseCase:
     async def __call__(self, query: QueryRecreateDTO) -> ResponseToVacancyEntity:
         try:
             new_response = await self.ai_service.regenerate_response(
-                query.user_id,
-                query.response,
-                query.user_comments
+                query.user_id, query.response, query.user_comments
             )
             return new_response
         except ValueError:
@@ -26,9 +23,6 @@ class RegenerateResponseUseCase:
                 query.resume_id,
             )
             new_response = await self.ai_service.regenerate_response(
-                query.user_id,
-                query.response,
-                query.user_comments,
-                data=data
+                query.user_id, query.response, query.user_comments, data=data
             )
             return new_response

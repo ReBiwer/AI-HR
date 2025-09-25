@@ -8,7 +8,6 @@ from alembic import context
 from source.infrastructure.settings.app import app_settings
 
 from source.infrastructure.db.models.base import BaseModel
-import source.infrastructure.db.models as models
 
 config = context.config
 
@@ -18,7 +17,6 @@ if config.config_file_name is not None:
 config.set_main_option("sqlalchemy.url", app_settings.db_url)
 
 target_metadata = BaseModel.metadata
-
 
 
 def run_migrations_offline() -> None:

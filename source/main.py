@@ -8,7 +8,6 @@ from source.infrastructure.settings.app import app_settings
 from source.infrastructure.di import init_di_container
 
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
@@ -30,4 +29,10 @@ def create_app() -> FastAPI:
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:create_app", host='localhost', port=app_settings.BACKEND_PORT, factory=True, reload=True)
+    uvicorn.run(
+        "main:create_app",
+        host="localhost",
+        port=app_settings.BACKEND_PORT,
+        factory=True,
+        reload=True,
+    )

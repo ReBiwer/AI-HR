@@ -15,52 +15,61 @@ from source.domain.entities.resume import ResumeEntity, JobExperienceEntity
 
 
 class MyHHClient(HHClient):
-
-    async def get_employer(self, employer_id: str, *, subject: Optional[Subject] = None) -> Dict[str, Any]:
-        return (await self._request(
-            "GET",
-            f"/employers/{employer_id}",
-            subject=subject,
-        )).json()
+    async def get_employer(
+        self, employer_id: str, *, subject: Optional[Subject] = None
+    ) -> Dict[str, Any]:
+        return (
+            await self._request(
+                "GET",
+                f"/employers/{employer_id}",
+                subject=subject,
+            )
+        ).json()
 
     async def get_me(self, subject: Optional[Subject] = None) -> Dict[str, Any]:
-        return (await self._request(
-            "GET",
-            "/me",
-            subject=subject,
-        )).json()
+        return (
+            await self._request(
+                "GET",
+                "/me",
+                subject=subject,
+            )
+        ).json()
 
-    async def get_resumes_from_url(self, url: str, subject: Optional[Subject] = None) -> Dict[str, Any]:
-        return (await self._request(
-            "GET",
-            url,
-            subject=subject,
-        )).json()
+    async def get_resumes_from_url(
+        self, url: str, subject: Optional[Subject] = None
+    ) -> Dict[str, Any]:
+        return (
+            await self._request(
+                "GET",
+                url,
+                subject=subject,
+            )
+        ).json()
 
-    async def get_vacancies(self, subject: Optional[Subject], **filter_query) -> Dict[str, Any]:
-        return (await self._request(
-            "GET",
-            path="/vacancies",
-            subject=subject,
-            params=filter_query
-        )).json()
+    async def get_vacancies(
+        self, subject: Optional[Subject], **filter_query
+    ) -> Dict[str, Any]:
+        return (
+            await self._request(
+                "GET", path="/vacancies", subject=subject, params=filter_query
+            )
+        ).json()
 
 
 class HHService(IHHService):
-
     def __init__(self):
         self._oath_config = OAuthConfig(
             client_id=app_settings.HH_CLIENT_ID,
             client_secret=app_settings.HH_CLIENT_SECRET,
             redirect_uri=app_settings.HH_REDIRECT_URI,
-            token_url="https://api.hh.ru/token"
+            token_url="https://api.hh.ru/token",
         )
         self._user_agent = "AI HR/1.0 (bykov100898@yandex.ru)"
         self._keyed_store = InMemoryKeyedTokenStore()
         self._hh_tm = TokenManager(
-            config= self._oath_config,
+            config=self._oath_config,
             store=self._keyed_store,
-            user_agent=self._user_agent
+            user_agent=self._user_agent,
         )
         self.hh_client = MyHHClient(self._hh_tm)
 
@@ -78,9 +87,8 @@ class HHService(IHHService):
             "phone": data["phone"],
             "email": data["email"] if data["email"] else None,
             "resumes": [
-                self._serialize_data_resume(data)
-                for data in data["resumes_data"]
-            ]
+                self._serialize_data_resume(data) for data in data["resumes_data"]
+            ],
         }
         return UserEntity.model_validate(user_data)
 
@@ -95,10 +103,12 @@ class HHService(IHHService):
             "hh_id": data["id"],
             "url_vacancy": data["alternate_url"],
             "name": data["name"],
-            "experience": Experience(id=data["experience"]['id'], name=data["experience"]['name']),
+            "experience": Experience(
+                id=data["experience"]["id"], name=data["experience"]["name"]
+            ),
             "description": data["description"],
             "key_skills": data["key_skills"],
-            "employer_id": data["employer"]["id"]
+            "employer_id": data["employer"]["id"],
         }
         return VacancyEntity.model_validate(vacancy_data)
 
@@ -112,7 +122,7 @@ class HHService(IHHService):
         employer_data = {
             "hh_id": data["id"],
             "name": data["name"],
-            "description": data["description"]
+            "description": data["description"],
         }
         return EmployerEntity.model_validate(employer_data)
 
@@ -157,20 +167,20 @@ class HHService(IHHService):
         }
         return ResponseToVacancyEntity.model_validate(response_data)
 
-
     async def get_me(self, subject: Optional[Subject]) -> UserEntity:
         user_data = await self.hh_client.get_me(subject=subject)
 
         resumes_data = await self.hh_client.get_resumes_from_url(
-            "/resumes/mine",
-            subject=subject
+            "/resumes/mine", subject=subject
         )
         # отдельный запрос делается, для подгрузки description
         # почему-то при загрузке всех резюме этого поля нет
-        valid_resumes_data = await asyncio.gather(*[
-            self.hh_client.get_resume(data["id"], subject=subject)
-            for data in resumes_data["items"]
-        ])
+        valid_resumes_data = await asyncio.gather(
+            *[
+                self.hh_client.get_resume(data["id"], subject=subject)
+                for data in resumes_data["items"]
+            ]
+        )
         user_data["resumes_data"] = valid_resumes_data
         return self._serialize_data_user(user_data)
 
@@ -178,10 +188,16 @@ class HHService(IHHService):
         return self._hh_tm.authorization_url(state)
 
     async def auth(self, code: str) -> AuthTokens:
-        tokens = await self._hh_tm.exchange_code(app_settings.HH_FAKE_SUBJECT, code=code)
-        return AuthTokens(access_token=tokens.access_token, refresh_token=tokens.refresh_token)
+        tokens = await self._hh_tm.exchange_code(
+            app_settings.HH_FAKE_SUBJECT, code=code
+        )
+        return AuthTokens(
+            access_token=tokens.access_token, refresh_token=tokens.refresh_token
+        )
 
-    async def get_vacancies(self, subject: Optional[Subject], **filter_query) -> list[VacancyEntity]:
+    async def get_vacancies(
+        self, subject: Optional[Subject], **filter_query
+    ) -> list[VacancyEntity]:
         vacancies = await self.hh_client.get_vacancies(subject, **filter_query)
         result = await asyncio.gather(
             *[self.get_vacancy_data(vacancy["id"]) for vacancy in vacancies["items"]]
@@ -189,18 +205,26 @@ class HHService(IHHService):
         return result
 
     async def get_vacancy_data(self, vacancy_id: str) -> VacancyEntity:
-        data = await self.hh_client.get_vacancy(vacancy_id, subject=app_settings.HH_FAKE_SUBJECT)
+        data = await self.hh_client.get_vacancy(
+            vacancy_id, subject=app_settings.HH_FAKE_SUBJECT
+        )
         return self._serialize_data_vacancy(data)
 
     async def get_employer_data(self, employer_id: str) -> EmployerEntity:
-        data = await self.hh_client.get_employer(employer_id, subject=app_settings.HH_FAKE_SUBJECT)
+        data = await self.hh_client.get_employer(
+            employer_id, subject=app_settings.HH_FAKE_SUBJECT
+        )
         return self._serialize_data_employer(data)
 
     async def get_resume_data(self, resume_id: str) -> ResumeEntity:
-        data = await self.hh_client.get_resume(resume_id, subject=app_settings.HH_FAKE_SUBJECT)
+        data = await self.hh_client.get_resume(
+            resume_id, subject=app_settings.HH_FAKE_SUBJECT
+        )
         return self._serialize_data_resume(data)
 
-    async def get_good_responses(self, quantity_responses: int = 10) -> list[ResponseToVacancyEntity]:
+    async def get_good_responses(
+        self, quantity_responses: int = 10
+    ) -> list[ResponseToVacancyEntity]:
         cur_page = 0
         invitations_responses = []
         # запрашиваем отклики у которых статус interview/собеседование
@@ -211,14 +235,21 @@ class HHService(IHHService):
                     "/negotiations",
                     # фильтрация по статус invitations/Активные приглашения не работает
                     # либо у меня нет таких откликов, либо нужно использовать другой статус (я его не нашел)
-                    params={"status": "active", "per_page": quantity_responses, "page": cur_page},
-                    subject=app_settings.HH_FAKE_SUBJECT
+                    params={
+                        "status": "active",
+                        "per_page": quantity_responses,
+                        "page": cur_page,
+                    },
+                    subject=app_settings.HH_FAKE_SUBJECT,
                 )
                 data = (await asyncio.wait_for(coro_request, timeout=100)).json()
                 for item in data["items"]:
                     # в список добавляются только те отклики, у которых статус interview/собеседование
                     # и если список уже добавленных откликов не превышает переданный лимит
-                    if item["state"]["id"] == "interview" and len(invitations_responses) < quantity_responses:
+                    if (
+                        item["state"]["id"] == "interview"
+                        and len(invitations_responses) < quantity_responses
+                    ):
                         invitations_responses.append(item)
                     # если длина собранных откликов уже соответствует, то останавливаем цикл
                     elif len(invitations_responses) == quantity_responses:
@@ -233,7 +264,7 @@ class HHService(IHHService):
             self.hh_client._request(
                 "GET",
                 f"/negotiations/{response['id']}/messages",
-                subject=app_settings.HH_FAKE_SUBJECT
+                subject=app_settings.HH_FAKE_SUBJECT,
             )
             for response in invitations_responses
         ]
@@ -259,10 +290,10 @@ class HHService(IHHService):
         return rules
 
     async def data_collect_for_llm(
-            self,
-            user_id: int,
-            vacancy_id: str,
-            resume_id: str,
+        self,
+        user_id: int,
+        vacancy_id: str,
+        resume_id: str,
     ) -> GenerateResponseData:
         vacancy_data = await self.get_vacancy_data(vacancy_id)
         tasks = [
@@ -285,5 +316,5 @@ class HHService(IHHService):
         return await self.hh_client.apply_to_vacancy(
             resume_id=response.resume_id,
             vacancy_id=response.vacancy_id,
-            message=response.message
+            message=response.message,
         )

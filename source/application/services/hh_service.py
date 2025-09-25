@@ -1,5 +1,4 @@
 import re
-import asyncio
 from typing import TypedDict, Union
 from abc import ABC, abstractmethod
 
@@ -17,7 +16,6 @@ class AuthTokens(TypedDict):
 
 
 class IHHService(ABC):
-
     @staticmethod
     def extract_vacancy_id_from_url(url: str) -> str:
         pattern = r"\/vacancy\/(?P<id>\d+)(?=[\/?#]|$)"
@@ -37,7 +35,7 @@ class IHHService(ABC):
     @abstractmethod
     async def auth(self, code: str) -> AuthTokens:
         """Метод для авторизации, принимает код полученный после редиректа
-         возвращает словарь с access и refresh токенами"""
+        возвращает словарь с access и refresh токенами"""
         ...
 
     @abstractmethod
@@ -56,7 +54,9 @@ class IHHService(ABC):
         ...
 
     @abstractmethod
-    async def get_good_responses(self, quantity_responses: int = 10) -> list[ResponseToVacancyEntity]:
+    async def get_good_responses(
+        self, quantity_responses: int = 10
+    ) -> list[ResponseToVacancyEntity]:
         """Метод для получения определенного количества удачных откликов"""
         ...
 
@@ -67,10 +67,10 @@ class IHHService(ABC):
 
     @abstractmethod
     async def data_collect_for_llm(
-            self,
-            user_id: int,
-            vacancy_id: str,
-            resume_id: str,
+        self,
+        user_id: int,
+        vacancy_id: str,
+        resume_id: str,
     ) -> GenerateResponseData:
         """Метод для сбора всех данных для отправки в llm для генерации отклика"""
         ...

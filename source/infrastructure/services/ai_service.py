@@ -26,7 +26,9 @@ class AIServiceState(TypedDict):
     user_comments: str | None
 
 
-def gen_png_graph(app_obj, name_photo: str = f"{app_settings.BASE_DIR}/schema_graph.png") -> None:
+def gen_png_graph(
+    app_obj, name_photo: str = f"{app_settings.BASE_DIR}/schema_graph.png"
+) -> None:
     """
     Генерирует PNG-изображение графа и сохраняет его в файл.
 
@@ -39,17 +41,15 @@ def gen_png_graph(app_obj, name_photo: str = f"{app_settings.BASE_DIR}/schema_gr
 
 
 class AIService(IAIService):
-
     def __init__(self, checkpointer: BaseCheckpointSaver):
         self.llm = ChatOpenAI(
             model=app_settings.OPENAI_MODEL,
             temperature=0.7,
             api_key=app_settings.OPENROUTER_API_KEY,
-            base_url=app_settings.OPENROUTER_BASE_URL
+            base_url=app_settings.OPENROUTER_BASE_URL,
         )
         self._workflow = self._build_workflow(checkpointer)
         gen_png_graph(self._workflow)
-
 
     @staticmethod
     def _get_config(user_id: int) -> RunnableConfig:
@@ -59,9 +59,8 @@ class AIService(IAIService):
             }
         )
 
-
     def _build_workflow(self, checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
-        workflow = StateGraph(AIServiceState) # type: ignore
+        workflow = StateGraph(AIServiceState)  # type: ignore
         workflow.add_node("fake_node", lambda x: x)
         workflow.add_node("generate_response", self._generate_response_node)
         workflow.add_node("regenerate_response", self._regenerate_response_node)
@@ -71,14 +70,13 @@ class AIService(IAIService):
             self._check_exist_response,
             {
                 "generate_response": "generate_response",
-                "regenerate_response": "regenerate_response"
-            }
+                "regenerate_response": "regenerate_response",
+            },
         )
         workflow.add_edge(START, "fake_node")
         workflow.add_edge("generate_response", END)
         workflow.add_edge("regenerate_response", END)
         return workflow.compile(checkpointer=checkpointer)
-
 
     @staticmethod
     def _check_exist_response(state: AIServiceState) -> str:
@@ -86,23 +84,28 @@ class AIService(IAIService):
             return "generate_response"
         return "regenerate_response"
 
-
     async def _generate_response_node(self, state: AIServiceState) -> dict[str, str]:
         prompt = PromptTemplate(
-            input_variables=["vacancy", "resume", "employer", "good_responses", "user_rules"],
+            input_variables=[
+                "vacancy",
+                "resume",
+                "employer",
+                "good_responses",
+                "user_rules",
+            ],
             template="""
-            Ты мой помощник в написании сопроводительных писем. 
+            Ты мой помощник в написании сопроводительных писем.
             Тебе нужно составить сопроводительное письмо к этой вакансии: {vacancy}\n
             Письмо составляй учитывая следующую информацию: \n
-            
+
             1. мое резюме {resume};\n
             2. описание работодателя если оно есть {employer}\n
             3. мои удачные отклики {good_responses}.\n
             4. мои правила по составлению сопроводительного {user_rules};\n
-            
+
             Также в конце нужно обязательно добавить абзац про мою мотивацию работы у работодателя
-            опираясь на информацию из вакансии и описание работодателя (если оно есть).            
-            """
+            опираясь на информацию из вакансии и описание работодателя (если оно есть).
+            """,
         )
         message = HumanMessage(content=prompt.format(**state))
         try:
@@ -112,25 +115,32 @@ class AIService(IAIService):
             print(f"Ошибка отправки промтпа: {e}")
             raise
 
-
     async def _regenerate_response_node(self, state: AIServiceState) -> dict[str, str]:
         prompt = PromptTemplate(
-            input_variables=["vacancy", "resume", "employer", "good_responses", "user_rules", "response", "user_comments"],
+            input_variables=[
+                "vacancy",
+                "resume",
+                "employer",
+                "good_responses",
+                "user_rules",
+                "response",
+                "user_comments",
+            ],
             template="""
-            Ты мой помощник в написании сопроводительных писем. 
+            Ты мой помощник в написании сопроводительных писем.
             Тебе нужно скорректировать сопроводительное составленное ранее {response}\n.
             В исправлении учитывай следующую информацию: \n
 
-            1. описание вакансии {vacancy}\n 
-            2. мое резюме {resume};\n 
+            1. описание вакансии {vacancy}\n
+            2. мое резюме {resume};\n
             3. описание работодателя если оно есть {employer}\n
             4. мои правила по составлению сопроводительного {user_rules};\n
             5. мои удачные отклики {good_responses}.\n
             6. мои комментарии {user_comments}
 
             Также в конце нужно обязательно добавить абзац про мою мотивацию работы у работодателя
-            опираясь на информацию из вакансии и описание работодателя (если оно есть)            
-            """
+            опираясь на информацию из вакансии и описание работодателя (если оно есть)
+            """,
         )
         message = HumanMessage(content=prompt.format(**state))
         try:
@@ -140,14 +150,12 @@ class AIService(IAIService):
             print(f"Ошибка отправки промтпа: {e}")
             raise
 
-
     async def generate_response(
-            self,
-            data: GenerateResponseData
+        self, data: GenerateResponseData
     ) -> ResponseToVacancyEntity:
         start_state = AIServiceState(**data)
         config = self._get_config(data["user_id"])
-        result = await self._workflow.ainvoke(start_state, config=config) # type: ignore
+        result = await self._workflow.ainvoke(start_state, config=config)  # type: ignore
         return ResponseToVacancyEntity(
             url_vacancy=result["vacancy"].url_vacancy,
             vacancy_id=result["vacancy"].id,
@@ -156,22 +164,24 @@ class AIService(IAIService):
         )
 
     async def regenerate_response(
-            self,
-            user_id: int,
-            response: str,
-            user_comments: str,
-            data: GenerateResponseData | None = None,
+        self,
+        user_id: int,
+        response: str,
+        user_comments: str,
+        data: GenerateResponseData | None = None,
     ) -> ResponseToVacancyEntity:
         config = self._get_config(user_id)
         if not data:
-            state: AIServiceState | None = self._workflow.get_state(config=config) # type: ignore
+            state: AIServiceState | None = self._workflow.get_state(config=config)  # type: ignore
 
             if not state.values:
-                raise ValueError("Не найдено сохраненного состояния. Необходимо собрать актуальную информацию")
-        
+                raise ValueError(
+                    "Не найдено сохраненного состояния. Необходимо собрать актуальную информацию"
+                )
+
             result = await self._workflow.ainvoke(
-                {"response": response, "user_comments": user_comments}, # type: ignore
-                config
+                {"response": response, "user_comments": user_comments},  # type: ignore
+                config,
             )
         else:
             start_state = AIServiceState(**data)
@@ -185,3 +195,18 @@ class AIService(IAIService):
             resume_id=result["resume"].id,
             message=result["response"],
         )
+
+
+if __name__ == "__main__":
+    import asyncio
+    from langgraph.checkpoint.redis import AsyncRedisSaver
+
+    async def main():
+        async with AsyncRedisSaver.from_conn_string(
+            app_settings.redis_url,
+            ttl={"default_ttl": app_settings.REDIS_CHECKPOINT_TTL},
+        ) as checkpointer:
+            await checkpointer.asetup()
+            AIService(checkpointer)
+
+    asyncio.run(main())

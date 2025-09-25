@@ -11,8 +11,6 @@ from source.infrastructure.di.providers import (
 
 def init_di_container(app: FastAPI) -> None:
     container = make_async_container(
-        ServicesProviders(),
-        UseCasesProviders(),
-        RepositoriesProviders()
+        ServicesProviders(), UseCasesProviders(), RepositoriesProviders()
     )
     setup_dishka(container, app)

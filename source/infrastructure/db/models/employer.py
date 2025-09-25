@@ -21,5 +21,3 @@ class EmployerModel(BaseModel):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
-
-

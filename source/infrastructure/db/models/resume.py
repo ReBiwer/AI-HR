@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, String, ForeignKey, DateTime
+from sqlalchemy import String, ForeignKey, DateTime
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -15,7 +15,9 @@ if TYPE_CHECKING:
 class JobExperienceModel(BaseModel):
     __tablename__ = "job_experiences"
 
-    resume_id: Mapped[str] = mapped_column(ForeignKey("resumes.id", ondelete="CASCADE"), index=True)
+    resume_id: Mapped[str] = mapped_column(
+        ForeignKey("resumes.id", ondelete="CASCADE"), index=True
+    )
 
     company: Mapped[str] = mapped_column(String, nullable=False)
     position: Mapped[str] = mapped_column(String, nullable=False)
@@ -23,14 +25,18 @@ class JobExperienceModel(BaseModel):
     end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     description: Mapped[str] = mapped_column(String, nullable=False)
 
-    resume: Mapped["ResumeModel"] = relationship(back_populates="job_experience", lazy="joined")
+    resume: Mapped["ResumeModel"] = relationship(
+        back_populates="job_experience", lazy="joined"
+    )
 
 
 class ResumeModel(BaseModel):
     __tablename__ = "resumes"
 
     hh_id: Mapped[str] = mapped_column(String, index=True, unique=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id"), nullable=False, index=True
+    )
 
     name: Mapped[str] = mapped_column(String, nullable=False)
     surname: Mapped[str] = mapped_column(String, nullable=False)
@@ -46,5 +52,5 @@ class ResumeModel(BaseModel):
         back_populates="resume",
         cascade="all, delete-orphan",
         order_by=lambda: JobExperienceModel.start.asc(),
-        lazy="selectin"
+        lazy="selectin",
     )

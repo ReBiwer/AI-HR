@@ -18,5 +18,7 @@ class VacancyEntity(BaseEntity):
     employer_id: str
 
     def __str__(self):
-        return (f"Вакансия {self.name}, описание вакансии - {self.description}, "
-                f"необходимые навыки - {', '.join([value['name'] for value in self.key_skills])}\n")
+        return (
+            f"Вакансия {self.name}, описание вакансии - {self.description}, "
+            f"необходимые навыки - {', '.join([value['name'] for value in self.key_skills])}\n"
+        )

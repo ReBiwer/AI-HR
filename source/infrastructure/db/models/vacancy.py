@@ -25,6 +25,6 @@ class VacancyModel(BaseModel):
     key_skills: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
 
     employer_id: Mapped[str] = mapped_column(ForeignKey("employers.id"))
-    employer: Mapped["EmployerModel"] = relationship(back_populates="vacancies", lazy="selectin")
-
-
+    employer: Mapped["EmployerModel"] = relationship(
+        back_populates="vacancies", lazy="selectin"
+    )

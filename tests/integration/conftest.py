@@ -38,8 +38,7 @@ def oauth_url(hh_service: HHService, test_settings: TestAppSettings) -> str:
 @pytest.fixture(scope="package")
 def mock_hh_service(hh_service: HHService, session_mocker):
     session_mocker.patch(
-        "source.infrastructure.di.providers.HHService",
-        return_value=hh_service
+        "source.infrastructure.di.providers.HHService", return_value=hh_service
     )
 
 
@@ -90,12 +89,12 @@ def auth_storage_path(tmp_path_factory) -> Path:
 
 @pytest.fixture(scope="package", autouse=True)
 async def auth_tokens(
-        browser: Browser,
-        oauth_url: str,
-        test_settings: TestAppSettings,
-        hh_service: HHService,
-        run_test_server,
-        auth_storage_path
+    browser: Browser,
+    oauth_url: str,
+    test_settings: TestAppSettings,
+    hh_service: HHService,
+    run_test_server,
+    auth_storage_path,
 ):
     """
     Фикстура для oauth авторизации на hh.ru и сохранения токенов
@@ -113,7 +112,9 @@ async def auth_tokens(
 
     # процесс oauth авторизации
     await page.goto(oauth_url, wait_until="domcontentloaded")
-    await page.get_by_label("Электронная почта или телефон").fill(test_settings.HH_LOGIN)
+    await page.get_by_label("Электронная почта или телефон").fill(
+        test_settings.HH_LOGIN
+    )
     await page.get_by_role("button", name="Войти с паролем").click()
     await page.get_by_label("Пароль").fill(test_settings.HH_PASSWORD)
     await page.get_by_role("button", name="Войти").first.click()
@@ -123,13 +124,25 @@ async def auth_tokens(
     await page.wait_for_url(pattern)
     text = await page.text_content("pre, body")
     data = json.loads(text)
-    tokens = AuthTokens(access_token=data["access_token"], refresh_token=data["refresh_token"])
+    tokens = AuthTokens(
+        access_token=data["access_token"], refresh_token=data["refresh_token"]
+    )
 
     # кладем полученные токены в куки браузера
-    await context.add_cookies([ # type: ignore
-        {"name": "access_token", "value": tokens["access_token"], "url": "http://localhost:8000"},
-        {"name": "refresh_token", "value": tokens["refresh_token"], "url": "http://localhost:8000"},
-    ])
+    await context.add_cookies(
+        [  # type: ignore
+            {
+                "name": "access_token",
+                "value": tokens["access_token"],
+                "url": "http://localhost:8000",
+            },
+            {
+                "name": "refresh_token",
+                "value": tokens["refresh_token"],
+                "url": "http://localhost:8000",
+            },
+        ]
+    )
     # сохраняем контекст в файле и закрываем контекст
     await context.storage_state(path=auth_storage_path)
     await context.close()
@@ -139,9 +152,12 @@ async def auth_tokens(
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
         expires_in=3600,
-        expires_at=datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=3600),
+        expires_at=datetime.datetime.now(datetime.UTC)
+        + datetime.timedelta(seconds=3600),
     )
-    await hh_service.hh_client.tm.store.set_tokens(test_settings.HH_FAKE_SUBJECT, token_pair)
+    await hh_service.hh_client.tm.store.set_tokens(
+        test_settings.HH_FAKE_SUBJECT, token_pair
+    )
 
     return tokens
 
@@ -152,10 +168,10 @@ def browser_context_args(auth_storage_path):
 
 
 @pytest.fixture(scope="package")
-async def test_vacancy(hh_service: HHService, test_settings: TestAppSettings) -> VacancyEntity:
+async def test_vacancy(
+    hh_service: HHService, test_settings: TestAppSettings
+) -> VacancyEntity:
     vacancy, *_ = await hh_service.get_vacancies(
-        test_settings.HH_FAKE_SUBJECT,
-        per_page=10,
-        text="Python разработчик"
+        test_settings.HH_FAKE_SUBJECT, per_page=10, text="Python разработчик"
     )
     return vacancy

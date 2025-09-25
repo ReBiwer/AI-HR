@@ -16,13 +16,12 @@ router = APIRouter(
 )
 
 
-@router.get(
-    "/hh/oauth/url",
-    name="get_oauth_url"
-)
+@router.get("/hh/oauth/url", name="get_oauth_url")
 async def get_oauth_url(
-        hh_service: FromDishka[IHHService],
-        state: Annotated[str, Query(description="Текущее состояние, для возврата после авторизации")] = None,
+    hh_service: FromDishka[IHHService],
+    state: Annotated[
+        str, Query(description="Текущее состояние, для возврата после авторизации")
+    ] = None,
 ) -> str:
     """
     Эндпоинт для получения ссылки для авторизации
@@ -34,15 +33,14 @@ async def get_oauth_url(
     return hh_service.get_auth_url(state)
 
 
-@router.get(
-    "/hh/tokens",
-    name="get_hh_token"
-)
+@router.get("/hh/tokens", name="get_hh_token")
 async def get_tokens(
-        request: Request,
-        use_case: FromDishka[OAuthHHUseCase],
-        code: Annotated[str, Query(description="Код авторизации от HeadHunter")],
-        state: Annotated[str, Query(description="Состояние переданное для возврата после авторизации")],
+    request: Request,
+    use_case: FromDishka[OAuthHHUseCase],
+    code: Annotated[str, Query(description="Код авторизации от HeadHunter")],
+    state: Annotated[
+        str, Query(description="Состояние переданное для возврата после авторизации")
+    ],
 ) -> RedirectResponse:
     """
     Эндпоинт для получения токенов после OAuth редиректа от HeadHunter.
@@ -54,33 +52,34 @@ async def get_tokens(
     :return:
     """
     try:
-        redirect_url, tokens = await use_case(code, state, request, app_settings.HH_FAKE_SUBJECT)
+        redirect_url, tokens = await use_case(
+            code, state, request, app_settings.HH_FAKE_SUBJECT
+        )
         response = RedirectResponse(redirect_url)
         response.set_cookie("access_token", value=tokens["access_token"])
         response.set_cookie("refresh_token", value=tokens["refresh_token"])
         return response
-    except ConnectionError as e:
+    except ConnectionError:
         # Ошибки соединения с API HeadHunter
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Сервис HeadHunter временно недоступен. Попробуйте позже."
+            detail="Сервис HeadHunter временно недоступен. Попробуйте позже.",
         )
     except NoMatchFound as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Не корректно передан {state=}. Детали ошибки: {e}"
+            detail=f"Не корректно передан {state=}. Детали ошибки: {e}",
         )
 
 
-@router.get(
-    "/hh/tokens/test",
-    name="test_tokens"
-)
+@router.get("/hh/tokens/test", name="test_tokens")
 async def get_tokens_for_test(
-        hh_service: FromDishka[IHHService],
-        request: Request,
-        code: Annotated[str, Query(description="Код авторизации от HeadHunter")] = None,
-        state: Annotated[str, Query(description="Состояние переданное для возврата после авторизации")] = None,
+    hh_service: FromDishka[IHHService],
+    request: Request,
+    code: Annotated[str, Query(description="Код авторизации от HeadHunter")] = None,
+    state: Annotated[
+        str, Query(description="Состояние переданное для возврата после авторизации")
+    ] = None,
 ) -> AuthTokens:
     """
     Тестовая ручка для получения токенов авторизации
@@ -95,5 +94,5 @@ async def get_tokens_for_test(
 
     return AuthTokens(
         access_token=request.cookies.get("access_token"),
-        refresh_token=request.cookies.get("refresh_token")
+        refresh_token=request.cookies.get("refresh_token"),
     )

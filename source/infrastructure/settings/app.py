@@ -42,4 +42,5 @@ class AppSettings(BaseSettings):
     def redis_url(self) -> str:
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_CHECKPOINT_NUM_DB}"
 
+
 app_settings = AppSettings()

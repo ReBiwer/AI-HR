@@ -15,25 +15,27 @@ router = APIRouter(
     route_class=DishkaRoute,
 )
 
+
 @router.post("/responses/generate")
 async def generate_response(
-        query: QueryCreateDTO,
-        use_case: FromDishka[GenerateResponseUseCase],
+    query: QueryCreateDTO,
+    use_case: FromDishka[GenerateResponseUseCase],
 ) -> ResponseToVacancyEntity:
     result = await use_case(query)
     return result
+
 
 @router.post("/responses/regenerate")
 async def regenerate_response(
-        query: QueryRecreateDTO,
-        use_case: FromDishka[RegenerateResponseUseCase],
+    query: QueryRecreateDTO,
+    use_case: FromDishka[RegenerateResponseUseCase],
 ) -> ResponseToVacancyEntity:
     result = await use_case(query)
     return result
 
+
 @router.post("/responses/send")
 async def send_response(
-        response: ResponseToVacancyEntity,
-        hh_service: FromDishka[IHHService]
+    response: ResponseToVacancyEntity, hh_service: FromDishka[IHHService]
 ) -> None:
     await hh_service.send_response_to_vacancy(response)

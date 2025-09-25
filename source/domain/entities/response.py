@@ -9,5 +9,7 @@ class ResponseToVacancyEntity(BaseEntity):
     quality: bool | None = None
 
     def __str__(self):
-        return (f"Сообщение отклика: {self.message}\n"
-                f"Релевантность отклика: {'релевантный' if self.quality else 'не релевантный'}")
+        return (
+            f"Сообщение отклика: {self.message}\n"
+            f"Релевантность отклика: {'релевантный' if self.quality else 'не релевантный'}"
+        )

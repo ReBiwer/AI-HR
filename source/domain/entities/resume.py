@@ -12,10 +12,12 @@ class JobExperienceEntity(BaseModel):
     description: str
 
     def __str__(self):
-        return (f"Компания: {self.company}\n"
-                f"Позиция: {self.position}\n"
-                f"Начало работы: c {self.start} {f'по {self.end}\n' if self.end else '\n'}"
-                f"Описание: {self.description}")
+        return (
+            f"Компания: {self.company}\n"
+            f"Позиция: {self.position}\n"
+            f"Начало работы: c {self.start} {f'по {self.end}\n' if self.end else '\n'}"
+            f"Описание: {self.description}"
+        )
 
 
 class ResumeEntity(BaseEntity):
@@ -28,11 +30,12 @@ class ResumeEntity(BaseEntity):
     contact_email: EmailStr
 
     def __str__(self):
-        job_experience = '\n'.join([
-            str(experience)
-            for experience in self.job_experience
-        ])
-        return (f"Имя: {self.name}, фамилия: {self.surname}\n"
-                f"Опыт работы: {job_experience}\n"
-                f"Навыки: {', '.join(self.skills)}\n"
-                f"Контакты: телефон {self.contact_phone}, email {self.contact_email}")
+        job_experience = "\n".join(
+            [str(experience) for experience in self.job_experience]
+        )
+        return (
+            f"Имя: {self.name}, фамилия: {self.surname}\n"
+            f"Опыт работы: {job_experience}\n"
+            f"Навыки: {', '.join(self.skills)}\n"
+            f"Контакты: телефон {self.contact_phone}, email {self.contact_email}"
+        )

@@ -12,7 +12,6 @@ class ISQLRepository[ET: BaseEntity](IRepository, ABC):
         self.session = session
 
 
-
 class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET]):
     model_class: type[DBModel]
     entity_class: type[ET]

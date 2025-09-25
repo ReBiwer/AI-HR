@@ -7,5 +7,6 @@ class EmployerEntity(BaseEntity):
     description: str
 
     def __str__(self):
-        return (f"Название компании: {self.name}\n"
-                f"Описание компании: {self.description}")
+        return (
+            f"Название компании: {self.name}\n" f"Описание компании: {self.description}"
+        )
