@@ -135,6 +135,7 @@ class HHService(IHHService):
         """
         resume_data = {
             "hh_id": data["id"],
+            "title": data["title"],
             "name": data["first_name"],
             "surname": data["last_name"],
             "job_description": [

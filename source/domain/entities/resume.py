@@ -22,6 +22,7 @@ class JobExperienceEntity(BaseModel):
 
 class ResumeEntity(BaseEntity):
     hh_id: str
+    title: str
     name: str
     surname: str
     job_experience: list[JobExperienceEntity]
