@@ -80,7 +80,7 @@ class HHService(IHHService):
         :return: UserEntity
         """
         user_data = {
-            "id": data["id"],
+            "hh_id": data["id"],
             "name": data["first_name"],
             "mid_name": data["mid_name"],
             "last_name": data["last_name"],
@@ -145,13 +145,11 @@ class HHService(IHHService):
             "title": data["title"],
             "name": data["first_name"],
             "surname": data["last_name"],
-            "job_description": [
+            "job_experience": [
                 JobExperienceEntity.model_validate(experience)
                 for experience in data["experience"]
             ],
             "skills": data["skill_set"],
-            "contact_phone": data["contact"]["phone"],
-            "contact_email": data["contact"]["email"],
         }
         resume_data.update(contact_dict)
         return ResumeEntity.model_validate(resume_data)
