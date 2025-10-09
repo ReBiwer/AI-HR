@@ -26,6 +26,7 @@ async def test_update_user(user_repo: UserRepository, test_user_entity: UserEnti
 
 
 async def test_delete_user(user_repo: UserRepository, test_user_entity: UserEntity):
-    await user_repo.delete(test_user_entity.id)
-    check = await user_repo.get(test_user_entity.id)
+    user = await user_repo.create(test_user_entity)
+    await user_repo.delete(user.id)
+    check = await user_repo.get(user.id)
     assert check is None
