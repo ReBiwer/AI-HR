@@ -6,6 +6,7 @@ class AppSettings(BaseSettings):
     # Базовые настройки приложения
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent.parent
     BOT_TOKEN: str
+    BACKEND_HOST: str
     BACKEND_PORT: int
     # Настройки базы данных
     DB_USER: str
