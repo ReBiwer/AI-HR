@@ -26,4 +26,5 @@ class UserModel(BaseModel):
         back_populates="user",
         cascade="all, delete-orphan",
         lazy="selectin",
+        single_parent=True,
     )
