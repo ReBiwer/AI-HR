@@ -4,6 +4,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class TestAppSettings(BaseSettings):
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent.parent
+    # Настройки тестовой базы данных
+    DB_USER: str
+    DB_PASS: str
+    DB_HOST: str
+    DB_NAME: str
     # Настройки для работы с API hh.ru
     HH_CLIENT_ID: str
     HH_CLIENT_SECRET: str
@@ -18,9 +23,10 @@ class TestAppSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=f"/{BASE_DIR}/.env.test", extra="ignore")
 
-    # @property
-    # def db_url(self) -> str:
-    #     return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:5432/{self.DB_NAME}"
+    @property
+    def db_url(self) -> str:
+        return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:5432/{self.DB_NAME}"
+
     #
     # @property
     # def redis_url(self) -> str:
