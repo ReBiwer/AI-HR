@@ -20,8 +20,11 @@ router = APIRouter(
 async def get_oauth_url(
     hh_service: FromDishka[IHHService],
     state: Annotated[
-        str, Query(description="Текущее состояние, для возврата после авторизации")
-    ] = None,
+        str,
+        Query(
+            description="Текущее состояние, для возврата после авторизации",
+        ),
+    ] = "test_tokens",
 ) -> str:
     """
     Эндпоинт для получения ссылки для авторизации
