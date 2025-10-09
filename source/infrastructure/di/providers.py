@@ -73,9 +73,12 @@ class UseCasesProviders(Provider):
 
     @provide
     def get_oauth_hh_use_case(
-        self, hh_service: IHHService, state_manager: IStateManager
+        self,
+        hh_service: IHHService,
+        state_manager: IStateManager,
+        repository: IUserRepository,
     ) -> OAuthHHUseCase:
-        return OAuthHHUseCase(hh_service, state_manager)
+        return OAuthHHUseCase(hh_service, state_manager, repository)
 
 
 class RepositoriesProviders(Provider):
