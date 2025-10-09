@@ -34,6 +34,7 @@ class ResumeModel(BaseModel):
     __tablename__ = "resumes"
 
     hh_id: Mapped[str] = mapped_column(String, index=True, unique=True)
+    title: Mapped[str]
     user_id: Mapped[str] = mapped_column(
         ForeignKey("users.id"), nullable=False, index=True
     )
