@@ -133,6 +133,13 @@ class HHService(IHHService):
         :param data: пример возвращаемых данных можно посмотреть тут: https://api.hh.ru/openapi/redoc#tag/Rezyume.-Prosmotr-informacii/operation/get-resume
         :return: ResumeEntity
         """
+        contact_map = {"phone": "contact_phone", "email": "contact_email"}
+        contact_dict = {
+            contact_map[contact["kind"]]: contact["contact_value"]
+            for contact in data["contact"]
+            if contact_map.get(contact["kind"])
+        }
+
         resume_data = {
             "hh_id": data["id"],
             "title": data["title"],
@@ -146,6 +153,7 @@ class HHService(IHHService):
             "contact_phone": data["contact"]["phone"],
             "contact_email": data["contact"]["email"],
         }
+        resume_data.update(contact_dict)
         return ResumeEntity.model_validate(resume_data)
 
     @staticmethod
