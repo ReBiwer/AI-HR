@@ -20,7 +20,7 @@ async def test_get_vacancy_data(
     test_settings: TestAppSettings,
     test_vacancy: VacancyEntity,
 ):
-    result = await hh_service.get_vacancy_data(test_vacancy.id)
+    result = await hh_service.get_vacancy_data(test_vacancy.hh_id)
     assert result
     assert isinstance(result, VacancyEntity)
 
@@ -50,7 +50,7 @@ async def test_data_collect_for_llm(
 ):
     data_user = await hh_service.get_me(test_settings.HH_FAKE_SUBJECT)
     result = await hh_service.data_collect_for_llm(
-        test_vacancy.id, data_user.resumes[0].id
+        data_user.id, test_vacancy.hh_id, data_user.resumes[0].hh_id
     )
     assert result
     assert isinstance(result["vacancy"], VacancyEntity)
