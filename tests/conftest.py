@@ -34,3 +34,11 @@ def _tune_playwright_timeouts(request) -> None:
 @pytest.fixture(scope="session")
 def test_settings() -> TestAppSettings:
     return TestAppSettings()
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--run-migrations",
+        action="store_true",
+        help="Запустить alembic upgrade в автозапускаемой фикстуре",
+    )

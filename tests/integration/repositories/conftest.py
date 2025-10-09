@@ -20,14 +20,6 @@ from source.domain.entities.user import UserEntity
 from source.domain.entities.resume import ResumeEntity, JobExperienceEntity
 
 
-def pytest_addoption(parser):
-    parser.addoption(
-        "--run-migrations",
-        action="store_true",
-        help="Запустить alembic upgrade в автозапускаемой фикстуре",
-    )
-
-
 @pytest.fixture(scope="package")
 def async_engine(test_settings: TestAppSettings) -> AsyncEngine:
     return create_async_engine(test_settings.db_url)
