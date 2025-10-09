@@ -1,4 +1,3 @@
-import uvicorn
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
@@ -6,6 +5,7 @@ from source.presentation.api.auth import router as auth_router
 from source.presentation.api.ai import router as ai_router
 from source.infrastructure.settings.app import app_settings
 from source.infrastructure.di import init_di_container
+from source.presentation.wsgi import Application, get_app_options
 
 
 @asynccontextmanager
@@ -29,10 +29,13 @@ def create_app() -> FastAPI:
 
 
 if __name__ == "__main__":
-    uvicorn.run(
-        "main:create_app",
-        host="localhost",
-        port=app_settings.BACKEND_PORT,
-        factory=True,
-        reload=True,
+    gunicorn_app = Application(
+        app=create_app(),
+        options=get_app_options(
+            host=app_settings.BACKEND_HOST,
+            port=app_settings.BACKEND_PORT,
+            timeout=900,
+            workers=4,
+        ),
     )
+    gunicorn_app.run()
