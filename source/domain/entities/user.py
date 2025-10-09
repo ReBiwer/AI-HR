@@ -11,4 +11,5 @@ class UserEntity(BaseEntity):
     last_name: str
     phone: str | None = None
     email: EmailStr | None = None
+    telegram_id: int | None = None
     resumes: list[ResumeEntity]
