@@ -26,7 +26,7 @@ class JobExperienceModel(BaseModel):
     description: Mapped[str] = mapped_column(String, nullable=False)
 
     resume: Mapped["ResumeModel"] = relationship(
-        back_populates="job_experience", lazy="joined"
+        back_populates="job_experience", lazy="joined", single_parent=True
     )
 
 
@@ -36,7 +36,7 @@ class ResumeModel(BaseModel):
     hh_id: Mapped[str] = mapped_column(String, index=True, unique=True)
     title: Mapped[str]
     user_id: Mapped[str] = mapped_column(
-        ForeignKey("users.id"), nullable=False, index=True
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
     name: Mapped[str] = mapped_column(String, nullable=False)

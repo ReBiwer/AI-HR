@@ -24,6 +24,7 @@ class UserModel(BaseModel):
 
     resumes: Mapped[list["ResumeModel"]] = relationship(
         back_populates="user",
+        passive_deletes=True,
         cascade="all, delete-orphan",
         lazy="selectin",
         single_parent=True,
