@@ -12,8 +12,11 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
     def _validate_entity_to_db_model(self, data: ET) -> DBModel:
         raise NotImplementedError
 
-    async def get(self, id_entity: int) -> ET | None:
-        stmt = select(self.model_class).where(self.model_class.id == id_entity)
+    async def _check_exist_entity(self, data: ET) -> DBModel | None:
+        raise NotImplementedError
+
+    async def get(self, **filters) -> ET | None:
+        stmt = select(self.model_class).filter_by(**filters)
         result = await self.session.execute(stmt)
         model_instance = result.scalar_one_or_none()
         if model_instance:
@@ -21,6 +24,10 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
         return None
 
     async def create(self, entity: ET) -> ET:
+        existing_instance = await self._check_exist_entity(entity)
+        if existing_instance:
+            return self.entity_class.model_validate(existing_instance.dump_dict())
+
         model_instance = self._validate_entity_to_db_model(entity)
         self.session.add(model_instance)
         await self.session.flush()
