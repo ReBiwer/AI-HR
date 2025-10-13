@@ -8,9 +8,18 @@ async def test_create_user(user_repo: UserRepository, test_user_entity: UserEnti
     assert isinstance(result, UserEntity)
 
 
+async def test_duplicate_create_user(
+    user_repo: UserRepository, test_user_entity: UserEntity
+):
+    new_user = await user_repo.create(test_user_entity)
+    duple_user = await user_repo.create(test_user_entity)
+    assert new_user.id == duple_user.id
+    assert new_user.hh_id == duple_user.hh_id
+
+
 async def test_get_user(user_repo: UserRepository, test_user_entity: UserEntity):
     new_user = await user_repo.create(test_user_entity)
-    result = await user_repo.get(new_user.id)
+    result = await user_repo.get(id=new_user.id)
     assert result
     assert isinstance(result, UserEntity)
 
@@ -28,5 +37,5 @@ async def test_update_user(user_repo: UserRepository, test_user_entity: UserEnti
 async def test_delete_user(user_repo: UserRepository, test_user_entity: UserEntity):
     user = await user_repo.create(test_user_entity)
     await user_repo.delete(user.id)
-    check = await user_repo.get(user.id)
+    check = await user_repo.get(id=user.id)
     assert check is None
