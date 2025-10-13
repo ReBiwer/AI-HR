@@ -1,15 +1,8 @@
-from abc import ABC
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from source.infrastructure.db.models.base import BaseModel
-from source.application.repositories.base import IRepository
+from source.application.repositories.base import ISQLRepository
 from source.domain.entities.base import BaseEntity
-
-
-class ISQLRepository[ET: BaseEntity](IRepository, ABC):
-    def __init__(self, session: AsyncSession):
-        self.session = session
 
 
 class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET]):

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Protocol
 
 from source.domain.entities.base import BaseEntity
@@ -16,6 +17,11 @@ class IRepository[ET: BaseEntity](ABC):
 
     @abstractmethod
     async def delete(self, id_entity: int) -> None: ...
+
+
+class ISQLRepository[ET: BaseEntity](IRepository, ABC):
+    def __init__(self, session: AsyncSession):
+        self.session = session
 
 
 class IUnitOfWork(Protocol):
