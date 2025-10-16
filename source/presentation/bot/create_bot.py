@@ -19,18 +19,6 @@ async def set_commands(bot: Bot):
     await bot.set_my_commands(commands, BotCommandScopeDefault())
 
 
-async def on_startup(bot: Bot, dp: Dispatcher):
-    await bot.set_webhook(
-        url=f"{app_settings.WEBHOOK_URL}{app_settings.WEBHOOK_PATH}",
-        allowed_updates=dp.resolve_used_update_types(),
-        drop_pending_updates=True,
-    )
-
-
-async def on_shutdown(bot: Bot):
-    await bot.delete_webhook()
-
-
 async def create_bot() -> tuple[Bot, Dispatcher]:
     bot = Bot(
         token=app_settings.BOT_TOKEN,
@@ -38,8 +26,12 @@ async def create_bot() -> tuple[Bot, Dispatcher]:
     )
     storage = MemoryStorage()
     dp = Dispatcher(storage=storage)
-    dp.startup.register(on_startup)
-    dp.shutdown.register(on_shutdown)
+    await bot.delete_webhook()
+    await bot.set_webhook(
+        url=f"{app_settings.WEBHOOK_URL}{app_settings.WEBHOOK_PATH}",
+        allowed_updates=dp.resolve_used_update_types(),
+        drop_pending_updates=True,
+    )
     dp.include_router(main_router)
     init_di_container_bot(dp)
 
