@@ -12,7 +12,7 @@ from playwright.async_api import Browser
 from hh_api.auth.token_manager import OAuthConfig
 from hh_api.auth.keyed_stores import TokenPair
 
-from source.main import create_app
+from source.main import create_web_app
 from source.infrastructure.services.hh_service import HHService
 from source.infrastructure.settings.test import TestAppSettings
 from source.application.services.hh_service import AuthTokens
@@ -50,7 +50,7 @@ def run_test_server(test_settings: TestAppSettings, mock_hh_service):
 
     def _serve(h: str, p: int) -> None:
         # создаём приложение внутри процесса и запускаем uvicorn
-        app = create_app()
+        app = create_web_app()
         uvicorn.run(app, host=h, port=p, log_level="warning", lifespan="on")
 
     proc = Process(target=_serve, args=(host, port), daemon=True)
