@@ -7,6 +7,7 @@ def get_app_options(
     port: int,
     workers: int,
     timeout: int,
+    worker_class: str = "uvicorn.workers.UvicornWorker",
 ) -> dict:
     return {
         "accesslog": "-",
@@ -15,7 +16,7 @@ def get_app_options(
         "bind": f"{host}:{port}",
         "workers": workers,
         "timeout": timeout,
-        "worker_class": "uvicorn.workers.UvicornWorker",
+        "worker_class": worker_class,
     }
 
 
