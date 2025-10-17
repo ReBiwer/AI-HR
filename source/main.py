@@ -6,7 +6,7 @@ from source.presentation.api.ai import router as ai_router
 from source.infrastructure.settings.app import app_settings
 from source.infrastructure.di import init_di_container
 from source.presentation.wsgi import Application, get_app_options
-from source.presentation.bot.create_bot import create_bot_app
+from source.presentation.bot.create_bot import run_bot
 
 
 @asynccontextmanager
@@ -43,13 +43,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.type_app == "telegram":
-        app = create_bot_app()
-        options = get_app_options(
-            host=app_settings.BOT_APP_HOST,
-            port=app_settings.BOT_APP_PORT,
-            timeout=900,
-            workers=4,
-        )
+        import asyncio
+
+        asyncio.run(run_bot())
     else:
         app = create_web_app()
         options = get_app_options(
