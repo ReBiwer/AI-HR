@@ -30,7 +30,7 @@ class OAuthHHUseCase:
             repo = self.class_repo(session)
             payload = await repo.create(user)
 
-        converted_payload = f"id={payload.id}, name={payload.name}"
+        converted_payload = payload.model_dump_json(include={"id", "name"})
         redirect_url = await self.state_manager.state_convert(
             state, converted_payload, request
         )
