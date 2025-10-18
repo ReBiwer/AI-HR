@@ -55,8 +55,8 @@ if __name__ == "__main__":
             workers=4,
         )
 
-    gunicorn_app = Application(
-        app=app,
-        options=options,
-    )
-    gunicorn_app.run()
+        gunicorn_app = Application(
+            app=app,
+            options=options,
+        )
+        gunicorn_app.run()
