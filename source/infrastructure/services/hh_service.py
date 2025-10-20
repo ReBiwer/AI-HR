@@ -1,6 +1,7 @@
 import asyncio
 from typing import Optional, Dict, Any
-from hh_api.auth.keyed_stores import InMemoryKeyedTokenStore
+from redis.asyncio.client import Redis
+from hh_api.auth.keyed_stores import RedisKeyedTokenStore
 from hh_api.auth.token_manager import OAuthConfig
 from hh_api.client import HHClient, TokenManager, Subject
 
@@ -65,7 +66,8 @@ class HHService(IHHService):
             token_url="https://api.hh.ru/token",
         )
         self._user_agent = "AI HR/1.0 (bykov100898@yandex.ru)"
-        self._keyed_store = InMemoryKeyedTokenStore()
+        redis_client = Redis()
+        self._keyed_store = RedisKeyedTokenStore(redis_client)
         self._hh_tm = TokenManager(
             config=self._oath_config,
             store=self._keyed_store,
@@ -194,10 +196,8 @@ class HHService(IHHService):
     def get_auth_url(self, state: str):
         return self._hh_tm.authorization_url(state)
 
-    async def auth(self, code: str) -> AuthTokens:
-        tokens = await self._hh_tm.exchange_code(
-            app_settings.HH_FAKE_SUBJECT, code=code
-        )
+    async def auth(self, subject: Optional[Subject], code: str) -> AuthTokens:
+        tokens = await self._hh_tm.exchange_code(subject, code=code)
         return AuthTokens(
             access_token=tokens.access_token, refresh_token=tokens.refresh_token
         )
@@ -207,30 +207,33 @@ class HHService(IHHService):
     ) -> list[VacancyEntity]:
         vacancies = await self.hh_client.get_vacancies(subject, **filter_query)
         result = await asyncio.gather(
-            *[self.get_vacancy_data(vacancy["id"]) for vacancy in vacancies["items"]]
+            *[
+                self.get_vacancy_data(subject, vacancy["id"])
+                for vacancy in vacancies["items"]
+            ]
         )
         return result
 
-    async def get_vacancy_data(self, vacancy_id: str) -> VacancyEntity:
-        data = await self.hh_client.get_vacancy(
-            vacancy_id, subject=app_settings.HH_FAKE_SUBJECT
-        )
+    async def get_vacancy_data(
+        self, subject: Optional[Subject], vacancy_id: str
+    ) -> VacancyEntity:
+        data = await self.hh_client.get_vacancy(vacancy_id, subject=subject)
         return self._serialize_data_vacancy(data)
 
-    async def get_employer_data(self, employer_id: str) -> EmployerEntity:
-        data = await self.hh_client.get_employer(
-            employer_id, subject=app_settings.HH_FAKE_SUBJECT
-        )
+    async def get_employer_data(
+        self, subject: Optional[Subject], employer_id: str
+    ) -> EmployerEntity:
+        data = await self.hh_client.get_employer(employer_id, subject=subject)
         return self._serialize_data_employer(data)
 
-    async def get_resume_data(self, resume_id: str) -> ResumeEntity:
-        data = await self.hh_client.get_resume(
-            resume_id, subject=app_settings.HH_FAKE_SUBJECT
-        )
+    async def get_resume_data(
+        self, subject: Optional[Subject], resume_id: str
+    ) -> ResumeEntity:
+        data = await self.hh_client.get_resume(resume_id, subject=subject)
         return self._serialize_data_resume(data)
 
     async def get_good_responses(
-        self, quantity_responses: int = 10
+        self, subject: Optional[Subject], quantity_responses: int = 10
     ) -> list[ResponseToVacancyEntity]:
         cur_page = 0
         invitations_responses = []
@@ -247,7 +250,7 @@ class HHService(IHHService):
                         "per_page": quantity_responses,
                         "page": cur_page,
                     },
-                    subject=app_settings.HH_FAKE_SUBJECT,
+                    subject=subject,
                 )
                 data = (await asyncio.wait_for(coro_request, timeout=100)).json()
                 for item in data["items"]:
@@ -271,7 +274,7 @@ class HHService(IHHService):
             self.hh_client._request(
                 "GET",
                 f"/negotiations/{response['id']}/messages",
-                subject=app_settings.HH_FAKE_SUBJECT,
+                subject=subject,
             )
             for response in invitations_responses
         ]
@@ -298,16 +301,17 @@ class HHService(IHHService):
 
     async def data_collect_for_llm(
         self,
+        subject: Optional[Subject],
         user_id: int,
         vacancy_id: str,
         resume_id: str,
     ) -> GenerateResponseData:
-        vacancy_data = await self.get_vacancy_data(vacancy_id)
+        vacancy_data = await self.get_vacancy_data(subject, vacancy_id)
         tasks = [
-            self.get_employer_data(vacancy_data.employer_id),
-            self.get_resume_data(resume_id),
+            self.get_employer_data(subject, vacancy_data.employer_id),
+            self.get_resume_data(subject, resume_id),
             self.get_user_rules(),
-            self.get_good_responses(),
+            self.get_good_responses(subject),
         ]
         result = await asyncio.gather(*tasks)
         return GenerateResponseData(
