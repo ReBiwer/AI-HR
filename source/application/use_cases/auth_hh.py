@@ -23,8 +23,7 @@ class OAuthHHUseCase:
     async def __call__(
         self, code: str, state: str, request: Mapping[str, Any], subject
     ) -> tuple[URL, AuthTokens]:
-        tokens = await self.hh_service.auth(code)
-        user = await self.hh_service.get_me(subject)
+        user, tokens = await self.hh_service.auth(code)
 
         async with self.uow as session:
             repo = self.class_repo(session)
