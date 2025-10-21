@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Python: source.main (uv)",
+        "type": "python",
+        "request": "launch",
+        "module": "source.main",
+        "cwd": "/home/vladimir/Projects/AI-HR",
+        "python": "/home/vladimir/Projects/AI-HR/.venv/bin/python",
+        "env": {
+          "PYTHONPATH": "/home/vladimir/Projects/AI-HR"
+        },
+        "console": "integratedTerminal",
+        "justMyCode": true
+      }
+    ]
+  }
