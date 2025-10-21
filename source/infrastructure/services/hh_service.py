@@ -1,6 +1,11 @@
 import asyncio
+import httpx
 from typing import Optional, Dict, Any
+
+from httpx import Response
 from redis.asyncio.client import Redis
+from hh_api.auth import TokenPair
+from hh_api.exceptions import HHAPIError, HHAuthError, HHNetworkError
 from hh_api.auth.keyed_stores import RedisKeyedTokenStore
 from hh_api.auth.token_manager import OAuthConfig
 from hh_api.client import HHClient, TokenManager, Subject
@@ -15,7 +20,7 @@ from source.domain.entities.response import ResponseToVacancyEntity
 from source.domain.entities.resume import ResumeEntity
 
 
-class MyHHClient(HHClient):
+class CustomHHClient(HHClient):
     async def get_employer(
         self, employer_id: str, *, subject: Optional[Subject] = None
     ) -> Dict[str, Any]:
@@ -26,6 +31,72 @@ class MyHHClient(HHClient):
                 subject=subject,
             )
         ).json()
+
+    async def authorization(self, tokens: TokenPair) -> dict[str, Any]:
+        url_user = f"{self.base_url}/me"
+        url_resumes = f"{self.base_url}/resumes/mine"
+        last_exc: Optional[Exception] = None
+
+        for attempt in range(1, self.retries + 1):
+            try:
+                req_headers = {
+                    "Authorization": f"Bearer {tokens.access_token}",
+                    "User-Agent": self.user_agent,
+                }
+                resp_user = await self._client.request(
+                    "GET",
+                    url_user,
+                    headers=req_headers,
+                )
+                # авторизационные ошибки пробрасываем как HHAuthError
+                if resp_user.status_code in (401, 403):
+                    # У многих интеграций это значит «нужно переавторизовать пользователя».
+                    raise HHAuthError(resp_user.status_code, resp_user.text)
+
+                if resp_user.status_code >= 400:
+                    raise HHAPIError(resp_user.status_code, resp_user.text)
+
+                resp_resumes_user = await self._client.request(
+                    "GET",
+                    url_resumes,
+                    headers=req_headers,
+                )
+                user_data = resp_user.json()
+
+                resumes_data: list[Response] = await asyncio.gather(
+                    *[
+                        self._client.request(
+                            "GET",
+                            f"{self.base_url}/resumes/{data["id"]}",
+                            headers=req_headers,
+                        )
+                        for data in resp_resumes_user.json()["items"]
+                    ]
+                )
+
+                for response in resumes_data:
+                    response.raise_for_status()
+
+                user_data["resumes_data"] = [resume.json() for resume in resumes_data]
+                return user_data
+
+            except httpx.RequestError as e:
+                last_exc = e
+                if attempt < self.retries:
+                    await asyncio.sleep(self.backoff_base * (2 ** (attempt - 1)))
+                    continue
+                raise HHNetworkError(str(e)) from e
+
+            except HHAPIError as e:
+                last_exc = e
+                # 5xx — можно попробовать повторить
+                if 500 <= getattr(e, "status_code", 0) < 600 and attempt < self.retries:
+                    await asyncio.sleep(self.backoff_base * (2 ** (attempt - 1)))
+                    continue
+                raise
+
+        assert last_exc is not None
+        raise last_exc
 
     async def get_me(self, subject: Optional[Subject] = None) -> Dict[str, Any]:
         return (
@@ -57,6 +128,27 @@ class MyHHClient(HHClient):
         ).json()
 
 
+class CustomTokenManager(TokenManager):
+    async def exchange_auth_code(self, code: str) -> TokenPair:
+        data = {
+            "grant_type": "authorization_code",
+            "client_id": self.config.client_id,
+            "client_secret": self.config.client_secret,
+            "code": code,
+            "redirect_uri": self.config.redirect_uri,
+        }
+        headers = {"User-Agent": self.user_agent}
+        resp = await self._post_with_retry(
+            self.config.token_url, data=data, headers=headers
+        )
+        payload = resp.json()
+        tokens = self._tokenpair_from_payload(payload)
+        return tokens
+
+    async def save_tokens(self, subject: Subject, tokens: TokenPair) -> None:
+        await self.store.set_tokens(subject, tokens)
+
+
 class HHService(IHHService):
     def __init__(self):
         self._oath_config = OAuthConfig(
@@ -68,12 +160,24 @@ class HHService(IHHService):
         self._user_agent = "AI HR/1.0 (bykov100898@yandex.ru)"
         redis_client = Redis()
         self._keyed_store = RedisKeyedTokenStore(redis_client)
-        self._hh_tm = TokenManager(
+        self._hh_tm = CustomTokenManager(
             config=self._oath_config,
             store=self._keyed_store,
             user_agent=self._user_agent,
         )
-        self.hh_client = MyHHClient(self._hh_tm)
+        self.hh_client = CustomHHClient(self._hh_tm)
+
+    def get_auth_url(self, state: str):
+        return self._hh_tm.authorization_url(state)
+
+    async def auth(self, code: str) -> tuple[UserEntity, AuthTokens]:
+        tokens = await self._hh_tm.exchange_auth_code(code)
+        resp = await self.hh_client.authorization(tokens)
+        auth_user = self._serialize_data_user(resp)
+        await self._hh_tm.save_tokens(auth_user.hh_id, tokens)
+        return auth_user, AuthTokens(
+            access_token=tokens.access_token, refresh_token=tokens.refresh_token
+        )
 
     async def get_me(self, subject: Optional[Subject]) -> UserEntity:
         user_data = await self.hh_client.get_me(subject=subject)
@@ -91,15 +195,6 @@ class HHService(IHHService):
         )
         user_data["resumes_data"] = valid_resumes_data
         return self._serialize_data_user(user_data)
-
-    def get_auth_url(self, state: str):
-        return self._hh_tm.authorization_url(state)
-
-    async def auth(self, subject: Optional[Subject], code: str) -> AuthTokens:
-        tokens = await self._hh_tm.exchange_code(subject, code=code)
-        return AuthTokens(
-            access_token=tokens.access_token, refresh_token=tokens.refresh_token
-        )
 
     async def get_vacancies(
         self, subject: Optional[Subject], **filter_query
