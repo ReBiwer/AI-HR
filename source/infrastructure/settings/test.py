@@ -17,6 +17,11 @@ class TestAppSettings(BaseSettings):
     HH_LOGIN: str
     HH_PASSWORD: str
 
+    # Настройки подключения к Redis
+    REDIS_HOST: str
+    REDIS_PORT: str
+    REDIS_DB_NUM: int
+
     OPENAI_MODEL: str
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     OPENROUTER_API_KEY: str
