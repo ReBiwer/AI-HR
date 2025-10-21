@@ -1,5 +1,5 @@
 import datetime
-
+import urllib.parse
 from redis.asyncio.client import Redis
 
 from source.infrastructure.services.new_hh_service import AuthConfig, TokenManager
@@ -14,6 +14,17 @@ def test_auth_confi(auth_config):
 
     url_with_params = auth_config.get_full_url("/mine", id=1, name="Vova")
     assert url_with_params == "https://api.hh.ru/mine?id=1&name=Vova"
+
+    auth_url = auth_config.get_auth_url("test_state")
+    auth_params = urllib.parse.urlencode(
+        {
+            "response_type": "code",
+            "client_id": auth_config.client_id,
+            "redirect_uri": auth_config.redirect_uri,
+            "state": "test_state",
+        }
+    )
+    assert auth_url == f"{auth_config.authorize_url}?{auth_params}"
 
 
 async def test_token_manager(

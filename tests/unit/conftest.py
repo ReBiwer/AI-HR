@@ -22,7 +22,7 @@ def auth_config() -> AuthConfig:
     return AuthConfig(
         client_id="1234",
         client_secret="secret",
-        redirect_uri="https://loaclhos:8000",
+        redirect_uri="https://loaclhost:8000",
         user_agent="User-Agent 007",
     )
 

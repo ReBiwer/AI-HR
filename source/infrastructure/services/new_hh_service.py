@@ -21,6 +21,7 @@ class AuthConfig:
     client_secret: str
     redirect_uri: str
     user_agent: str
+    authorize_url: str = "https://hh.ru/oauth/authorize"
     token_url: str = "https://api.hh.ru/token"
     base_url: str = "https://api.hh.ru"
 
@@ -48,6 +49,15 @@ class AuthConfig:
                 url_pars.fragment,
             )
         )
+
+    def get_auth_url(self, state: str, redirect_uri: str | None = None) -> str:
+        params = {
+            "response_type": "code",
+            "client_id": self.client_id,
+            "redirect_uri": redirect_uri or self.redirect_uri,
+            "state": state,
+        }
+        return f"{self.authorize_url}?{parse.urlencode(params)}"
 
 
 class TokenManager:
@@ -116,6 +126,16 @@ class TokenManager:
 
 
 class NewHHService(IHHService):
+    def __init__(
+        self,
+        config: AuthConfig,
+        token_manager: TokenManager,
+        http_client: AsyncClient | None = None,
+    ):
+        self._conf = config
+        self._token_manager = token_manager
+        self._http_client = http_client if http_client else AsyncClient(timeout=20.0)
+
     def get_auth_url(self, state: str) -> str: ...
 
     async def get_me(self, subject: Union[int, str]) -> UserEntity: ...
