@@ -1,4 +1,3 @@
-import datetime
 import re
 from typing import TypedDict, Union
 from abc import ABC, abstractmethod
@@ -14,8 +13,6 @@ from source.domain.entities.user import UserEntity
 class AuthTokens(TypedDict):
     access_token: str
     refresh_token: str
-    expires_in: int | None
-    expire_at: datetime.datetime | None
 
 
 class IHHService(ABC):
@@ -127,19 +124,19 @@ class IHHService(ABC):
         return ResponseToVacancyEntity.model_validate(response_data)
 
     @abstractmethod
-    async def get_me(self, subject: Union[int, str]) -> UserEntity:
-        """Метод возвращает информацию о залогиненным пользователе"""
-        ...
-
-    @abstractmethod
     def get_auth_url(self, state: str) -> str:
         """Метод для получения url для OAuth авторизации"""
         ...
 
     @abstractmethod
-    async def auth(self, subject: Union[int, str], code: str) -> AuthTokens:
+    async def auth(self, code: str) -> tuple[UserEntity, AuthTokens]:
         """Метод для авторизации, принимает код полученный после редиректа
         возвращает словарь с access и refresh токенами"""
+        ...
+
+    @abstractmethod
+    async def get_me(self, subject: Union[int, str]) -> UserEntity:
+        """Метод возвращает информацию о залогиненным пользователе"""
         ...
 
     @abstractmethod
