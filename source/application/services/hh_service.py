@@ -140,6 +140,13 @@ class IHHService(ABC):
         ...
 
     @abstractmethod
+    async def get_vacancies(
+        self, subject: Union[int, str], **filter_query
+    ) -> list[VacancyEntity]:
+        """Метод для поиска вакансий по фильтрам"""
+        ...
+
+    @abstractmethod
     async def get_vacancy_data(
         self, subject: Union[int, str], vacancy_id: str
     ) -> VacancyEntity:
