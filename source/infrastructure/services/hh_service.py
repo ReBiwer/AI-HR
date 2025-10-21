@@ -8,11 +8,11 @@ from hh_api.client import HHClient, TokenManager, Subject
 from source.application.services.ai_service import GenerateResponseData
 from source.domain.entities.employer import EmployerEntity
 from source.domain.entities.user import UserEntity
-from source.domain.entities.vacancy import Experience, VacancyEntity
+from source.domain.entities.vacancy import VacancyEntity
 from source.infrastructure.settings.app import app_settings
 from source.application.services.hh_service import IHHService, AuthTokens
 from source.domain.entities.response import ResponseToVacancyEntity
-from source.domain.entities.resume import ResumeEntity, JobExperienceEntity
+from source.domain.entities.resume import ResumeEntity
 
 
 class MyHHClient(HHClient):
@@ -74,107 +74,6 @@ class HHService(IHHService):
             user_agent=self._user_agent,
         )
         self.hh_client = MyHHClient(self._hh_tm)
-
-    def _serialize_data_user(self, data: dict) -> UserEntity:
-        """
-        Сериализация данных пользователя возвращаемых из API hh.ru
-        :param data: пример возвращаемых данных можно посмотреть тут: https://api.hh.ru/openapi/redoc#tag/Informaciya-o-soiskatele
-        :return: UserEntity
-        """
-        user_data = {
-            "hh_id": data["id"],
-            "name": data["first_name"],
-            "mid_name": data["mid_name"],
-            "last_name": data["last_name"],
-            "phone": data["phone"],
-            "email": data["email"] if data["email"] else None,
-            "resumes": [
-                self._serialize_data_resume(data) for data in data["resumes_data"]
-            ],
-        }
-        return UserEntity.model_validate(user_data)
-
-    @staticmethod
-    def _serialize_data_vacancy(data: dict) -> VacancyEntity:
-        """
-        Сериализация данных возвращаемых из API hh.ru
-        :param data: пример возвращаемых данных можно посмотреть тут: https://api.hh.ru/openapi/redoc#tag/Vakansii
-        :return: VacancyEntity
-        """
-        vacancy_data = {
-            "hh_id": data["id"],
-            "url_vacancy": data["alternate_url"],
-            "name": data["name"],
-            "experience": Experience(
-                id=data["experience"]["id"], name=data["experience"]["name"]
-            ),
-            "description": data["description"],
-            "key_skills": data["key_skills"],
-            "employer_id": data["employer"]["id"],
-        }
-        return VacancyEntity.model_validate(vacancy_data)
-
-    @staticmethod
-    def _serialize_data_employer(data: dict) -> EmployerEntity:
-        """
-        Сериализация данных возвращаемых из API hh.ru
-        :param data: пример возвращаемых данных можно посмотреть тут: https://api.hh.ru/openapi/redoc#tag/Podskazki/operation/get-registered-companies-suggests
-        :return: EmployerEntity
-        """
-        employer_data = {
-            "hh_id": data["id"],
-            "name": data["name"],
-            "description": data["description"],
-        }
-        return EmployerEntity.model_validate(employer_data)
-
-    @staticmethod
-    def _serialize_data_resume(data: dict) -> ResumeEntity:
-        """
-        Сериализация данных возвращаемых из API hh.ru
-        :param data: пример возвращаемых данных можно посмотреть тут: https://api.hh.ru/openapi/redoc#tag/Rezyume.-Prosmotr-informacii/operation/get-resume
-        :return: ResumeEntity
-        """
-        contact_map = {"phone": "contact_phone", "email": "contact_email"}
-        contact_dict = {
-            contact_map[contact["kind"]]: contact["contact_value"]
-            for contact in data["contact"]
-            if contact_map.get(contact["kind"])
-        }
-
-        resume_data = {
-            "hh_id": data["id"],
-            "title": data["title"],
-            "name": data["first_name"],
-            "surname": data["last_name"],
-            "job_experience": [
-                JobExperienceEntity.model_validate(experience)
-                for experience in data["experience"]
-            ],
-            "skills": data["skill_set"],
-        }
-        resume_data.update(contact_dict)
-        return ResumeEntity.model_validate(resume_data)
-
-    @staticmethod
-    def _serialize_data_response_to_vacancy(data: dict) -> ResponseToVacancyEntity:
-        """
-        Сериализация данных возвращаемых из API hh.ru
-        :param data: пример возвращаемых данных можно посмотреть тут: https://api.hh.ru/openapi/redoc#tag/Perepiska-(otklikipriglasheniya)-dlya-soiskatelya/operation/get-negotiations
-        :return:
-        """
-        response_data = {
-            "hh_id": data["id"],
-            "url_vacancy": data["url"],
-            "vacancy_id": data["id"],
-            "resume_id": data["resume"]["id"],
-            # ключ-значение message было добавлено отдельно
-            # схема получения находится тут
-            # https://api.hh.ru/openapi/redoc#tag/Perepiska-(otklikipriglasheniya)-dlya-soiskatelya/operation/get-negotiation-messages
-            "message": data["message"] if data["message"] else "",
-            "quality": True,
-        }
-        return ResponseToVacancyEntity.model_validate(response_data)
 
     async def get_me(self, subject: Optional[Subject]) -> UserEntity:
         user_data = await self.hh_client.get_me(subject=subject)
