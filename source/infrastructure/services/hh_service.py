@@ -32,37 +32,46 @@ class CustomHHClient(HHClient):
             )
         ).json()
 
+    @staticmethod
+    def _check_status_code_response(response: Response) -> None:
+        """Проверяет наличие ошибок в запросе"""
+        # авторизационные ошибки пробрасываем как HHAuthError
+        if response.status_code in (401, 403):
+            # У многих интеграций это значит «нужно переавторизовать пользователя».
+            raise HHAuthError(response.status_code, response.text)
+
+        if response.status_code >= 400:
+            raise HHAPIError(response.status_code, response.text)
+
+        response.raise_for_status()
+
     async def authorization(self, tokens: TokenPair) -> dict[str, Any]:
         url_user = f"{self.base_url}/me"
         url_resumes = f"{self.base_url}/resumes/mine"
         last_exc: Optional[Exception] = None
-
+        req_headers = {
+            "Authorization": f"Bearer {tokens.access_token}",
+            "User-Agent": self.user_agent,
+        }
         for attempt in range(1, self.retries + 1):
             try:
-                req_headers = {
-                    "Authorization": f"Bearer {tokens.access_token}",
-                    "User-Agent": self.user_agent,
-                }
+                # Получаем информацию о пользователе
                 resp_user = await self._client.request(
                     "GET",
                     url_user,
                     headers=req_headers,
                 )
-                # авторизационные ошибки пробрасываем как HHAuthError
-                if resp_user.status_code in (401, 403):
-                    # У многих интеграций это значит «нужно переавторизовать пользователя».
-                    raise HHAuthError(resp_user.status_code, resp_user.text)
+                self._check_status_code_response(resp_user)
+                user_data = resp_user.json()
 
-                if resp_user.status_code >= 400:
-                    raise HHAPIError(resp_user.status_code, resp_user.text)
-
+                # Получаем список резюме пользователя
                 resp_resumes_user = await self._client.request(
                     "GET",
                     url_resumes,
                     headers=req_headers,
                 )
-                user_data = resp_user.json()
-
+                self._check_status_code_response(resp_resumes_user)
+                # Запрашиваем детальную информацию по каждому резюме
                 resumes_data: list[Response] = await asyncio.gather(
                     *[
                         self._client.request(
@@ -73,10 +82,9 @@ class CustomHHClient(HHClient):
                         for data in resp_resumes_user.json()["items"]
                     ]
                 )
-
                 for response in resumes_data:
-                    response.raise_for_status()
-
+                    self._check_status_code_response(response)
+                # Добавляем информацию о резюме к общей инфе о пользователе
                 user_data["resumes_data"] = [resume.json() for resume in resumes_data]
                 return user_data
 
