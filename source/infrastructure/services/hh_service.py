@@ -240,7 +240,7 @@ class HHService(IHHService):
         cur_page = 0
         invitations_responses = []
         # запрашиваем отклики у которых статус interview/собеседование
-        while len(invitations_responses) != quantity_responses:
+        while len(invitations_responses) < quantity_responses:
             try:
                 coro_request = self.hh_client._request(
                     "GET",
