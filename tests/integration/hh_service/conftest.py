@@ -12,6 +12,7 @@ from playwright.async_api import Browser
 from hh_api.auth.token_manager import OAuthConfig
 from hh_api.auth.keyed_stores import TokenPair
 
+from source.domain.entities.user import UserEntity
 from source.main import create_web_app
 from source.infrastructure.services.hh_service import HHService
 from source.infrastructure.settings.test import TestAppSettings
@@ -91,6 +92,7 @@ def auth_storage_path(tmp_path_factory) -> Path:
 async def auth_tokens(
     browser: Browser,
     oauth_url: str,
+    test_user_entity: UserEntity,
     test_settings: TestAppSettings,
     hh_service: HHService,
     run_test_server,
@@ -100,6 +102,7 @@ async def auth_tokens(
     Фикстура для oauth авторизации на hh.ru и сохранения токенов
     :param browser: встроенная фикстура плагина playwright-pytest, представляет собой браузер
     :param oauth_url: url куда нужно зайти для oauth авторизации
+    :param test_user_entity: тестовый пользователь к которому привязываем токены
     :param test_settings: фикстура, настройки тестов
     :param hh_service: инстанс HHService, который у нас замокан в запущенном приложении
     :param run_test_server: фикстура, запуск тестового сервиса для получения токенов
@@ -155,9 +158,7 @@ async def auth_tokens(
         expires_at=datetime.datetime.now(datetime.UTC)
         + datetime.timedelta(seconds=3600),
     )
-    await hh_service.hh_client.tm.store.set_tokens(
-        test_settings.HH_FAKE_SUBJECT, token_pair
-    )
+    await hh_service.hh_client.tm.store.set_tokens(test_user_entity.hh_id, token_pair)
 
     return tokens
 

@@ -13,7 +13,7 @@ async def test_uow_commit(async_session: AsyncSession, test_user_entity: UserEnt
         assert created.id is not None
 
     # после выхода должно быть commit, сущность доступна для чтения
-    fetched = await user_repo.get(created.id)
+    fetched = await user_repo.get(id=created.id)
     assert fetched is not None
     assert fetched.name == test_user_entity.name
 
@@ -31,5 +31,5 @@ async def test_uow_rollback_on_exception(
             raise Boom()
 
     # после исключения – откат, сущности не должно быть
-    result = await user_repo.get(test_user_entity.id)
+    result = await user_repo.get(id=test_user_entity.id)
     assert result is None

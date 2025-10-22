@@ -93,7 +93,7 @@ async def get_tokens_for_test(
     :return:
     """
     if code:
-        return await hh_service.auth(code)
+        return (await hh_service.auth(code))[1]
 
     return AuthTokens(
         access_token=request.cookies.get("access_token"),
