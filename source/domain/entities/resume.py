@@ -12,10 +12,11 @@ class JobExperienceEntity(BaseModel):
     description: str
 
     def __str__(self):
+        format_date = "%m.%Y"
         return (
             f"Компания: {self.company}\n"
             f"Позиция: {self.position}\n"
-            f"Начало работы: c {self.start} {f'по {self.end}\n' if self.end else '\n'}"
+            f"Начало работы: c {self.start.strftime(format_date)} {f'по {self.end.strftime(format_date)}\n' if self.end else '\n'}"
             f"Описание: {self.description}"
         )
 
