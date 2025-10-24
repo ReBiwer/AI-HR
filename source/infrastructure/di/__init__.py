@@ -8,6 +8,7 @@ from source.infrastructure.di.providers import (
     ServicesProviders,
     UseCasesProviders,
     RepositoriesProviders,
+    BotProvider,
 )
 
 
@@ -22,6 +23,7 @@ def bot_container_factory() -> AsyncContainer:
         ServicesProviders(),
         UseCasesProviders(),
         RepositoriesProviders(),
+        BotProvider(),
         AiogramProvider(),
     )
 

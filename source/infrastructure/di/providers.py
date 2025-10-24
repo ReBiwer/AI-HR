@@ -1,11 +1,14 @@
 from typing import AsyncGenerator
 
+from aiogram.fsm.context import FSMContext
 from dishka import Provider, Scope, provide
+from dishka.integrations.aiogram import AiogramMiddlewareData
 from redis.asyncio.client import Redis
 from hh_api.auth import OAuthConfig, RedisKeyedTokenStore, KeyedTokenStore
 from langgraph.checkpoint.memory import BaseCheckpointSaver
 from langgraph.checkpoint.redis import AsyncRedisSaver
 
+from source.presentation.bot.storage_keys import StorageKeys
 from source.infrastructure.db.engine import async_session_maker
 from source.infrastructure.settings.app import app_settings
 from source.infrastructure.db.repositories.user import UserRepository
@@ -29,6 +32,7 @@ from source.application.services.state_manager import IStateManager
 from source.application.use_cases.generate_response import GenerateResponseUseCase
 from source.application.use_cases.regenerate_response import RegenerateResponseUseCase
 from source.application.use_cases.auth_hh import OAuthHHUseCase
+from source.domain.entities.user import UserEntity
 
 
 class ServicesProviders(Provider):
@@ -129,3 +133,17 @@ class RepositoriesProviders(Provider):
     @provide
     def get_job_experience_repository(self) -> type[IJobExperienceRepository]:
         return JobExperienceRepository
+
+
+class BotProvider(Provider):
+    scope = Scope.REQUEST
+
+    @provide
+    async def get_user_bot(
+        self, middleware_data: AiogramMiddlewareData
+    ) -> UserEntity | None:
+        state: FSMContext = middleware_data.get("state")
+        data_state = await state.get_data()
+        if StorageKeys.USER_INFO in data_state and data_state[StorageKeys.USER_INFO]:
+            return UserEntity.model_validate_json(data_state[StorageKeys.USER_INFO])
+        return None
