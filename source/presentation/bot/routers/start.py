@@ -59,9 +59,12 @@ async def start(
     args = command.args
     if args:
         try:
+            # расшифровываем полученный payload
             payload = json.loads(decode_payload(args))
             hh_id_user: str = payload.get("hh_id")
             id_user: int = payload.get("id")
+
+            # получаем токен из redis сохраненный еще на беке
             access_token = await token_manager.ensure_access(hh_id_user)
             if access_token:
                 async with uow as session:
@@ -71,7 +74,9 @@ async def start(
                     user.telegram_id = user_tg_id
                     await user_repo.update(user)
 
-                await state.update_data({"hh_id": hh_id_user, "id": id_user})
+                await state.update_data(
+                    {"user_data": user.model_dump_json(exclude_unset=True)}
+                )
 
                 await message.answer(
                     f"✅ Отлично, {user.name}! Авторизация успешна.\n\n"
@@ -80,10 +85,10 @@ async def start(
                 )
                 return
             else:
+                # если токен не найден, то на беке токен не сохранился
                 await message.answer(
                     "⚠️ Произошла ошибка при авторизации. Попробуйте еще раз."
                 )
-                # Очищаем возможные некорректные данные
 
         except (json.JSONDecodeError, ValueError):
             await message.answer(
@@ -93,13 +98,9 @@ async def start(
 
     # Проверяем, авторизован ли пользователь уже
     data_state = await state.get_data()
-    if "hh_id" in data_state and data_state["hh_id"]:
+    if "user_data" in data_state and data_state["user_data"]:
         # Пользователь уже авторизован, показываем главное меню
-        id_user = data_state["id"]
-
-        async with uow as session:
-            user_repo = class_repo(session)
-            user: UserEntity = await user_repo.get(id=id_user)
+        user: UserEntity = UserEntity.model_validate_json(data_state["user_data"])
 
         await message.answer(
             f"👋 С возвращением, {user.name}!\n\n"
@@ -114,8 +115,10 @@ async def start(
             "Для начала работы необходимо авторизоваться:\n"
             f"<a href='{auth_url}'>🔐 Авторизоваться в HH</a>\n\n"
             "После авторизации вы сможете:\n"
-            "• Просматривать вакансии\n"
-            "• Управлять откликами\n"
-            "• Работать с резюме\n"
+            "• Генерировать отклики на вакансии\n"
+            "• Просматривать резюме (в разработке)\n"
+            "• Просматривать вакансии (в разработке)\n"
+            "• Управлять откликами (в разработке)\n"
+            "• Работать с резюме (в разработке)\n"
             "• И многое другое!",
         )
