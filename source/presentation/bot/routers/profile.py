@@ -5,8 +5,10 @@ from aiogram.fsm.context import FSMContext
 from dishka import FromDishka
 
 from source.presentation.bot.storage_keys import StorageKeys
-from source.presentation.bot.utils.token_manager import TokenManager
+from source.presentation.bot.utils.splitter import split_long_message
+from source.infrastructure.services.hh_service import CustomTokenManager
 from source.application.services.hh_service import IHHService
+from source.domain.entities.user import UserEntity
 
 router = Router()
 
@@ -14,57 +16,37 @@ router = Router()
 @router.message(Command("profile"))
 async def show_profile(
     message: Message,
-    state: FSMContext,
+    token_manager: FromDishka[CustomTokenManager],
+    user: FromDishka[UserEntity | None],
     hh_service: FromDishka[IHHService],
 ):
     """
-    Показывает профиль пользователя HH.ru.
-
-    Демонстрирует:
-    - Получение токена из storage
-    - Использование токена для API запроса
-    - Обработку ошибок авторизации
+    Показывает информацию о пользователе
     """
-    token_manager = TokenManager(state)
 
-    # Получаем токен
-    access_token = await token_manager.get_access_token()
-
-    if not access_token:
+    if user:
+        access_token = await token_manager.ensure_access(user.hh_id)
+        if not access_token:
+            await message.answer(
+                "⚠️ Токен авторизации не найден или истек.\n"
+                "Пожалуйста, авторизуйтесь заново: /start"
+            )
+            return
+        try:
+            text_message = f"👤 <b>Ваш профиль HH.ru</b>\n\n{user}"
+            chunks_message = split_long_message(text_message)
+            for mess in chunks_message:
+                await message.answer(mess)
+        except Exception as e:
+            await message.answer(
+                f"⚠️ Ошибка при получении профиля: {str(e)}\n"
+                "Попробуйте авторизоваться заново: /start"
+            )
+    else:
         await message.answer(
-            "⚠️ Токен авторизации не найден или истек.\n"
-            "Пожалуйста, авторизуйтесь заново: /start"
+            "Для начала работы необходимо авторизоваться:\n"
+            f"<a href='{hh_service.get_auth_url("telegram")}'>🔐 Авторизоваться в HH</a>\n\n"
         )
-        return
-
-    # Используем токен для запроса к API
-    # (предполагается, что в hh_service есть метод для получения профиля)
-    try:
-        # Здесь должен быть реальный запрос к HH API
-        # Например: user_data = await hh_service.get_user_me(access_token)
-
-        # Получаем сохраненную информацию
-        user_info = await token_manager.get_user_info()
-
-        # Проверяем, не истекает ли скоро токен
-        needs_refresh = await token_manager.needs_refresh()
-        token_status = "⚠️ Скоро истечет" if needs_refresh else "✅ Активен"
-
-        await message.answer(
-            f"👤 <b>Ваш профиль HH.ru</b>\n\n"
-            f"ID: {user_info.hh_id}\n"
-            f"Имя: {user_info.name}\n"
-            f"Отчество: {user_info.mid_name}\n\n"
-            f"Статус токена: {token_status}"
-        )
-
-    except Exception as e:
-        await message.answer(
-            f"⚠️ Ошибка при получении профиля: {str(e)}\n"
-            "Попробуйте авторизоваться заново: /start"
-        )
-        # При ошибке авторизации можно очистить токены
-        await token_manager.clear_tokens()
 
 
 @router.message(Command("logout"))
