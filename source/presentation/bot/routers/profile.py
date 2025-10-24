@@ -1,17 +1,12 @@
-"""
-Роутер для работы с профилем пользователя.
-
-Демонстрирует использование сохраненных токенов для работы с HH API.
-"""
-
 from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from dishka import FromDishka
 
-from source.application.services.hh_service import IHHService
+from source.presentation.bot.storage_keys import StorageKeys
 from source.presentation.bot.utils.token_manager import TokenManager
+from source.application.services.hh_service import IHHService
 
 router = Router()
 
@@ -75,18 +70,10 @@ async def show_profile(
 @router.message(Command("logout"))
 async def logout(message: Message, state: FSMContext):
     """
-    Выход из аккаунта (очистка токенов).
-
-    Демонстрирует:
-    - Безопасную очистку токенов
-    - Сохранение других данных пользователя
+    Выход из аккаунта (очистка информации о пользователе их FSMContext).
     """
-    token_manager = TokenManager(state)
-
-    # Очищаем токены
-    await token_manager.clear_tokens()
+    await state.set_data({StorageKeys.USER_INFO: None})
 
     await message.answer(
-        "👋 Вы успешно вышли из аккаунта.\n\n"
-        "Ваши токены удалены. Для повторной работы используйте /start"
+        "👋 Вы успешно вышли из аккаунта.\n\n" "Для повторной работы используйте /start"
     )

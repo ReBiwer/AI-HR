@@ -1,14 +1,3 @@
-"""
-Роутер для обработки команды /start.
-
-Этот модуль обрабатывает начальную команду пользователя и процесс авторизации.
-
-Логика работы:
-1. Если пользователь приходит с payload (после авторизации) - сохраняем токены
-2. Если пользователь уже авторизован - показываем главное меню
-3. Если не авторизован - предлагаем авторизоваться
-"""
-
 import json
 from aiogram.types import Message
 from aiogram.dispatcher.router import Router
@@ -17,11 +6,12 @@ from aiogram.utils.payload import decode_payload
 from aiogram.fsm.context import FSMContext
 from dishka import FromDishka
 
+from source.presentation.bot.storage_keys import StorageKeys
+from source.infrastructure.services.hh_service import CustomTokenManager
 from source.application.repositories.base import IUnitOfWork
 from source.application.repositories.user import IUserRepository
 from source.application.services.hh_service import IHHService
 from source.domain.entities.user import UserEntity
-from source.infrastructure.services.hh_service import CustomTokenManager
 
 
 router = Router()
@@ -75,7 +65,7 @@ async def start(
                     await user_repo.update(user)
 
                 await state.update_data(
-                    {"user_data": user.model_dump_json(exclude_unset=True)}
+                    {StorageKeys.USER_INFO: user.model_dump_json(exclude_unset=True)}
                 )
 
                 await message.answer(
@@ -98,9 +88,11 @@ async def start(
 
     # Проверяем, авторизован ли пользователь уже
     data_state = await state.get_data()
-    if "user_data" in data_state and data_state["user_data"]:
+    if StorageKeys.USER_INFO in data_state and data_state[StorageKeys.USER_INFO]:
         # Пользователь уже авторизован, показываем главное меню
-        user: UserEntity = UserEntity.model_validate_json(data_state["user_data"])
+        user: UserEntity = UserEntity.model_validate_json(
+            data_state[StorageKeys.USER_INFO]
+        )
 
         await message.answer(
             f"👋 С возвращением, {user.name}!\n\n"
