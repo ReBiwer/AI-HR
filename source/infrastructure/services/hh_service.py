@@ -3,18 +3,14 @@ import httpx
 from typing import Optional, Dict, Any
 
 from httpx import Response
-from redis.asyncio.client import Redis
 from hh_api.auth import TokenPair
 from hh_api.exceptions import HHAPIError, HHAuthError, HHNetworkError
-from hh_api.auth.keyed_stores import RedisKeyedTokenStore
-from hh_api.auth.token_manager import OAuthConfig
 from hh_api.client import HHClient, TokenManager, Subject
 
 from source.application.services.ai_service import GenerateResponseData
 from source.domain.entities.employer import EmployerEntity
 from source.domain.entities.user import UserEntity
 from source.domain.entities.vacancy import VacancyEntity
-from source.infrastructure.settings.app import app_settings
 from source.application.services.hh_service import IHHService, AuthTokens
 from source.domain.entities.response import ResponseToVacancyEntity
 from source.domain.entities.resume import ResumeEntity
@@ -158,21 +154,8 @@ class CustomTokenManager(TokenManager):
 
 
 class HHService(IHHService):
-    def __init__(self):
-        self._oath_config = OAuthConfig(
-            client_id=app_settings.HH_CLIENT_ID,
-            client_secret=app_settings.HH_CLIENT_SECRET,
-            redirect_uri=app_settings.HH_REDIRECT_URI,
-            token_url="https://api.hh.ru/token",
-        )
-        self._user_agent = "AI HR/1.0 (bykov100898@yandex.ru)"
-        redis_client = Redis()
-        self._keyed_store = RedisKeyedTokenStore(redis_client)
-        self._hh_tm = CustomTokenManager(
-            config=self._oath_config,
-            store=self._keyed_store,
-            user_agent=self._user_agent,
-        )
+    def __init__(self, token_manager: CustomTokenManager):
+        self._hh_tm = token_manager
         self.hh_client = CustomHHClient(self._hh_tm)
 
     def get_auth_url(self, state: str):
