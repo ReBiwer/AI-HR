@@ -17,9 +17,11 @@ from aiogram.utils.payload import decode_payload
 from aiogram.fsm.context import FSMContext
 from dishka import FromDishka
 
+from source.application.repositories.base import IUnitOfWork
+from source.application.repositories.user import IUserRepository
 from source.application.services.hh_service import IHHService
-from source.presentation.bot.utils.token_manager import TokenManager
-from source.presentation.bot.schemas import TGUser
+from source.domain.entities.user import UserEntity
+from source.infrastructure.services.hh_service import CustomTokenManager
 
 
 router = Router()
@@ -30,6 +32,9 @@ async def start(
     message: Message,
     state: FSMContext,
     hh_service: FromDishka[IHHService],
+    token_manager: FromDishka[CustomTokenManager],
+    class_repo: FromDishka[type[IUserRepository]],
+    uow: FromDishka[IUnitOfWork],
     command: CommandObject = None,
 ):
     """
@@ -39,6 +44,9 @@ async def start(
         message: Сообщение от пользователя
         state: FSM context для работы с данными пользователя
         hh_service: Сервис для работы с HH.ru API
+        token_manager:
+        class_repo:
+        uow:
         command: Объект команды с аргументами
 
     Почему используем FSMContext:
@@ -47,34 +55,26 @@ async def start(
     - Поддерживает различные backend'ы (Memory, Redis, MongoDB)
     - Асинхронный и быстрый
     """
-    # Инициализируем менеджер токенов
-    token_manager = TokenManager(state)
-
     # Проверяем, пришел ли пользователь после авторизации (с payload)
     args = command.args
     if args:
         try:
-            # Декодируем payload, который пришел от backend после авторизации
             payload = json.loads(decode_payload(args))
+            hh_id_user: str = payload.get("hh_id")
+            id_user: int = payload.get("id")
+            access_token = await token_manager.ensure_access(hh_id_user)
+            if access_token:
+                async with uow as session:
+                    user_repo = class_repo(session)
+                    user: UserEntity = await user_repo.get(id=id_user)
+                    user_tg_id = message.from_user.id
+                    user.telegram_id = user_tg_id
+                    await user_repo.update(user)
 
-            # Извлекаем данные токенов
-
-            access_token = payload.get("access_token")
-            refresh_token = payload.get("refresh_token")
-            expires_in = payload.get("expires_in", 86400)  # По умолчанию 24 часа
-            user_schema = TGUser.model_validate(payload, from_attributes=True)
-
-            if access_token and refresh_token:
-                # Сохраняем токены в storage
-                await token_manager.save_tokens(
-                    access_token=access_token,
-                    refresh_token=refresh_token,
-                    expires_in=expires_in,
-                    user_info=user_schema.model_dump(),
-                )
+                await state.update_data({"hh_id": hh_id_user, "id": id_user})
 
                 await message.answer(
-                    f"✅ Отлично, {user_schema.name}! Авторизация успешна.\n\n"
+                    f"✅ Отлично, {user.name}! Авторизация успешна.\n\n"
                     "Теперь вы можете использовать все функции бота.\n"
                     "Используйте /help для просмотра доступных команд."
                 )
@@ -84,24 +84,25 @@ async def start(
                     "⚠️ Произошла ошибка при авторизации. Попробуйте еще раз."
                 )
                 # Очищаем возможные некорректные данные
-                await token_manager.clear_tokens()
 
         except (json.JSONDecodeError, ValueError):
             await message.answer(
                 "⚠️ Ошибка обработки данных авторизации. Попробуйте заново."
             )
-            await token_manager.clear_tokens()
             return
 
     # Проверяем, авторизован ли пользователь уже
-    is_authorized = await token_manager.is_token_valid()
-
-    if is_authorized:
+    data_state = await state.get_data()
+    if "hh_id" in data_state and data_state["hh_id"]:
         # Пользователь уже авторизован, показываем главное меню
-        user_info = await token_manager.get_user_info()
+        id_user = data_state["id"]
+
+        async with uow as session:
+            user_repo = class_repo(session)
+            user: UserEntity = await user_repo.get(id=id_user)
 
         await message.answer(
-            f"👋 С возвращением, {user_info.name}!\n\n"
+            f"👋 С возвращением, {user.name}!\n\n"
             "Вы уже авторизованы. Используйте /help для просмотра команд.\n\n"
             "Если хотите выйти, используйте /logout"
         )
