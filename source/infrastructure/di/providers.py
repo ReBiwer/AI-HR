@@ -1,5 +1,8 @@
 from typing import AsyncGenerator
+
 from dishka import Provider, Scope, provide
+from redis.asyncio.client import Redis
+from hh_api.auth import OAuthConfig, RedisKeyedTokenStore, KeyedTokenStore
 from langgraph.checkpoint.memory import BaseCheckpointSaver
 from langgraph.checkpoint.redis import AsyncRedisSaver
 
@@ -11,7 +14,7 @@ from source.infrastructure.db.repositories.resume import (
     JobExperienceRepository,
 )
 from source.infrastructure.db.uow import UnitOfWork
-from source.infrastructure.services.hh_service import HHService
+from source.infrastructure.services.hh_service import HHService, CustomTokenManager
 from source.infrastructure.services.ai_service import AIService
 from source.infrastructure.services.state_manager import StateManager
 from source.application.repositories.user import IUserRepository
@@ -32,8 +35,32 @@ class ServicesProviders(Provider):
     scope = Scope.APP
 
     @provide
-    def get_hh_service(self) -> IHHService:
-        return HHService()
+    def oauth_config(self) -> OAuthConfig:
+        return OAuthConfig(
+            client_id=app_settings.HH_CLIENT_ID,
+            client_secret=app_settings.HH_CLIENT_SECRET,
+            redirect_uri=app_settings.HH_REDIRECT_URI,
+            token_url="https://api.hh.ru/token",
+        )
+
+    @provide
+    def keyed_store(self) -> KeyedTokenStore:
+        redis_client = Redis()
+        return RedisKeyedTokenStore(redis_client)
+
+    @provide
+    def custom_token_manager(
+        self, config: OAuthConfig, keyed_store: KeyedTokenStore
+    ) -> CustomTokenManager:
+        return CustomTokenManager(
+            config=config,
+            store=keyed_store,
+            user_agent="AI HR/1.0 (bykov100898@yandex.ru)",
+        )
+
+    @provide
+    def get_hh_service(self, token_manager: CustomTokenManager) -> IHHService:
+        return HHService(token_manager)
 
     @provide
     async def get_checkpointer(self) -> AsyncGenerator[BaseCheckpointSaver, None]:
