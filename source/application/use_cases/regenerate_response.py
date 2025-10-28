@@ -18,6 +18,7 @@ class RegenerateResponseUseCase:
         except ValueError:
             vacancy_id = self.hh_service.extract_vacancy_id_from_url(query.url_vacancy)
             data = await self.hh_service.data_collect_for_llm(
+                query.subject,
                 query.user_id,
                 vacancy_id,
                 query.resume_id,
