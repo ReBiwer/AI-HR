@@ -42,7 +42,7 @@ class AuthMiddleware(BaseMiddleware):
             Результат выполнения handler или None, если авторизация не пройдена
         """
 
-        # Проверяем текст сообщение на приватность
+        # Проверяем сообщение на приватность
         check_match_to_patterns = any(
             bool(pattern.fullmatch(message.text)) for pattern in self.PRIVATE_PATTERN
         )
@@ -56,7 +56,7 @@ class AuthMiddleware(BaseMiddleware):
         state: FSMContext = data.get("state")
         data_state = await state.get_data()
         if StorageKeys.USER_INFO in data_state and data_state[StorageKeys.USER_INFO]:
-            data[StorageKeys.USER_INFO] = UserEntity.model_validate_json(
+            data_state[StorageKeys.USER_INFO] = UserEntity.model_validate_json(
                 data_state[StorageKeys.USER_INFO]
             )
             return await handler(message, data)
