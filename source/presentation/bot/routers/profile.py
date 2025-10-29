@@ -6,8 +6,6 @@ from dishka import FromDishka
 
 from source.presentation.bot.storage_keys import StorageKeys
 from source.presentation.bot.utils.splitter import split_long_message
-from source.infrastructure.services.hh_service import CustomTokenManager
-from source.application.services.hh_service import IHHService
 from source.domain.entities.user import UserEntity
 
 router = Router()
@@ -16,36 +14,21 @@ router = Router()
 @router.message(Command("profile"))
 async def show_profile(
     message: Message,
-    token_manager: FromDishka[CustomTokenManager],
-    user: FromDishka[UserEntity | None],
-    hh_service: FromDishka[IHHService],
+    user: FromDishka[UserEntity],
 ):
     """
     Показывает информацию о пользователе
     """
 
-    if user:
-        access_token = await token_manager.ensure_access(user.hh_id)
-        if not access_token:
-            await message.answer(
-                "⚠️ Токен авторизации не найден или истек.\n"
-                "Пожалуйста, авторизуйтесь заново: /start"
-            )
-            return
-        try:
-            text_message = f"👤 <b>Ваш профиль HH.ru</b>\n\n{user}"
-            chunks_message = split_long_message(text_message)
-            for mess in chunks_message:
-                await message.answer(mess)
-        except Exception as e:
-            await message.answer(
-                f"⚠️ Ошибка при получении профиля: {str(e)}\n"
-                "Попробуйте авторизоваться заново: /start"
-            )
-    else:
+    try:
+        text_message = f"👤 <b>Ваш профиль HH.ru</b>\n\n{user}"
+        chunks_message = split_long_message(text_message)
+        for mess in chunks_message:
+            await message.answer(mess)
+    except Exception as e:
         await message.answer(
-            "Для начала работы необходимо авторизоваться:\n"
-            f"<a href='{hh_service.get_auth_url("telegram")}'>🔐 Авторизоваться в HH</a>\n\n"
+            f"⚠️ Ошибка при получении профиля: {str(e)}\n"
+            "Попробуйте авторизоваться заново: /start"
         )
 
 
