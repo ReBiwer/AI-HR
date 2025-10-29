@@ -139,11 +139,7 @@ class BotProvider(Provider):
     scope = Scope.REQUEST
 
     @provide
-    async def get_user_bot(
-        self, middleware_data: AiogramMiddlewareData
-    ) -> UserEntity | None:
+    async def get_user_bot(self, middleware_data: AiogramMiddlewareData) -> UserEntity:
         state: FSMContext = middleware_data.get("state")
         data_state = await state.get_data()
-        if StorageKeys.USER_INFO in data_state and data_state[StorageKeys.USER_INFO]:
-            return UserEntity.model_validate_json(data_state[StorageKeys.USER_INFO])
-        return None
+        return UserEntity.model_validate_json(data_state[StorageKeys.USER_INFO])
