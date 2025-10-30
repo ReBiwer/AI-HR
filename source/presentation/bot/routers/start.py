@@ -10,6 +10,7 @@ from dishka import FromDishka
 from source.application.use_cases.bot.authorization import AuthUseCase
 from source.presentation.bot.keyboards.inline import profile_keyboard
 from source.constants.storage_keys import StorageKeys
+from source.constants.texts_message import StartMessages
 from source.application.services.hh_service import IHHService
 from source.domain.entities.user import UserEntity
 
@@ -47,10 +48,7 @@ async def start(
             )
 
             await message.answer(
-                f"✅ Отлично, {user.name}! Авторизация успешна.\n\n"
-                "Теперь вы можете использовать все функции бота.\n"
-                "Используйте /help для просмотра доступных команд.",
-                reply_markup=profile_keyboard(),
+                StartMessages.user_authenticated(user), reply_markup=profile_keyboard()
             )
         except (json.JSONDecodeError, ValueError):
             await message.answer(
@@ -60,22 +58,10 @@ async def start(
         if user:
             # Если пользователь есть, то приветствуем его
             await message.answer(
-                f"👋 С возвращением, {user.name}!\n\n"
-                "Вы уже авторизованы. Используйте /help для просмотра команд.\n\n",
+                StartMessages.user_back(user),
                 reply_markup=profile_keyboard(),
             )
         else:
             # Пользователь не авторизован, предлагаем пройти авторизацию
             auth_url = hh_service.get_auth_url("telegram")
-            await message.answer(
-                "👋 Добро пожаловать в бот для работы с HeadHunter!\n\n"
-                "Для начала работы необходимо авторизоваться:\n"
-                f"<a href='{auth_url}'>🔐 Авторизоваться в HH</a>\n\n"
-                "После авторизации вы сможете:\n"
-                "• Генерировать отклики на вакансии\n"
-                "• Просматривать резюме (в разработке)\n"
-                "• Просматривать вакансии (в разработке)\n"
-                "• Управлять откликами (в разработке)\n"
-                "• Работать с резюме (в разработке)\n"
-                "• И многое другое!",
-            )
+            await message.answer(StartMessages.user_not_authenticated(auth_url))
