@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from dishka import FromDishka
 
 from source.presentation.bot.storage_keys import StorageKeys, CallbackKeys
-from source.presentation.bot.utils.message_processing import profile_text
+from source.presentation.bot.utils.formatter_messages import profile_text
 from source.domain.entities.user import UserEntity
 
 router = Router()
