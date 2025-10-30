@@ -1,4 +1,4 @@
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Union
 
 from aiogram.fsm.context import FSMContext
 from dishka import Provider, Scope, provide
@@ -32,6 +32,7 @@ from source.application.services.state_manager import IStateManager
 from source.application.use_cases.generate_response import GenerateResponseUseCase
 from source.application.use_cases.regenerate_response import RegenerateResponseUseCase
 from source.application.use_cases.auth_hh import OAuthHHUseCase
+from source.application.use_cases.bot.authorization import AuthUseCase
 from source.domain.entities.user import UserEntity
 
 
@@ -139,7 +140,20 @@ class BotProvider(Provider):
     scope = Scope.REQUEST
 
     @provide
-    async def get_user_bot(self, middleware_data: AiogramMiddlewareData) -> UserEntity:
+    async def get_user_bot(
+        self, middleware_data: AiogramMiddlewareData
+    ) -> Union[UserEntity | None]:
         state: FSMContext = middleware_data.get("state")
         data_state = await state.get_data()
-        return UserEntity.model_validate_json(data_state[StorageKeys.USER_INFO])
+        if StorageKeys.USER_INFO in data_state and data_state[StorageKeys.USER_INFO]:
+            return UserEntity.model_validate_json(data_state[StorageKeys.USER_INFO])
+        return None
+
+    @provide
+    async def auth_use_case(
+        self,
+        token_manager: CustomTokenManager,
+        uow: IUnitOfWork,
+        class_repo: type[IUserRepository],
+    ) -> AuthUseCase:
+        return AuthUseCase(token_manager, uow, class_repo)
