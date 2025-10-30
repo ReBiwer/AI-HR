@@ -8,7 +8,7 @@ from hh_api.auth import OAuthConfig, RedisKeyedTokenStore, KeyedTokenStore
 from langgraph.checkpoint.memory import BaseCheckpointSaver
 from langgraph.checkpoint.redis import AsyncRedisSaver
 
-from source.presentation.bot.storage_keys import StorageKeys
+from source.constants.storage_keys import StorageKeys
 from source.infrastructure.db.engine import async_session_maker
 from source.infrastructure.settings.app import app_settings
 from source.infrastructure.db.repositories.user import UserRepository

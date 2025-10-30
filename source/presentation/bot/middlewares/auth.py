@@ -5,7 +5,7 @@ from aiogram.types import TelegramObject, Message
 from aiogram.fsm.context import FSMContext
 
 from source.domain.entities.user import UserEntity
-from source.presentation.bot.storage_keys import StorageKeys
+from source.constants.storage_keys import StorageKeys
 
 
 class AuthMiddleware(BaseMiddleware):

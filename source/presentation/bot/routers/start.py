@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from dishka import FromDishka
 
 from source.presentation.bot.keyboards.inline import profile_keyboard
-from source.presentation.bot.storage_keys import StorageKeys
+from source.constants.storage_keys import StorageKeys
 from source.infrastructure.services.hh_service import CustomTokenManager
 from source.application.repositories.base import IUnitOfWork
 from source.application.repositories.user import IUserRepository

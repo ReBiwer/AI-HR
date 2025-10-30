@@ -1,6 +1,6 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardMarkup
 
-from source.presentation.bot.storage_keys import CallbackKeys
+from source.constants.storage_keys import CallbackKeys
 
 
 def profile_keyboard() -> InlineKeyboardMarkup:
