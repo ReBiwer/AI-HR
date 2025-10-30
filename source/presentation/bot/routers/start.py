@@ -6,6 +6,7 @@ from aiogram.utils.payload import decode_payload
 from aiogram.fsm.context import FSMContext
 from dishka import FromDishka
 
+from source.presentation.bot.keyboards.inline import profile_keyboard
 from source.presentation.bot.storage_keys import StorageKeys
 from source.infrastructure.services.hh_service import CustomTokenManager
 from source.application.repositories.base import IUnitOfWork
@@ -71,7 +72,8 @@ async def start(
                 await message.answer(
                     f"✅ Отлично, {user.name}! Авторизация успешна.\n\n"
                     "Теперь вы можете использовать все функции бота.\n"
-                    "Используйте /help для просмотра доступных команд."
+                    "Используйте /help для просмотра доступных команд.",
+                    reply_markup=profile_keyboard(),
                 )
                 return
             else:
@@ -96,8 +98,8 @@ async def start(
 
         await message.answer(
             f"👋 С возвращением, {user.name}!\n\n"
-            "Вы уже авторизованы. Используйте /help для просмотра команд.\n\n"
-            "Если хотите выйти, используйте /logout"
+            "Вы уже авторизованы. Используйте /help для просмотра команд.\n\n",
+            reply_markup=profile_keyboard(),
         )
     else:
         # Пользователь не авторизован, предлагаем пройти авторизацию
