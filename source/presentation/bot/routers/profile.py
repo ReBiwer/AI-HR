@@ -1,30 +1,34 @@
-from aiogram import Router
-from aiogram.types import Message
+from typing import Union
+
+from aiogram import Router, F
+from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from dishka import FromDishka
 
-from source.presentation.bot.storage_keys import StorageKeys
-from source.presentation.bot.utils.splitter import split_long_message
+from source.presentation.bot.storage_keys import StorageKeys, CallbackKeys
+from source.presentation.bot.utils.message_processing import profile_text
 from source.domain.entities.user import UserEntity
 
 router = Router()
 
 
 @router.message(Command("profile"))
+@router.callback_query(F.data == CallbackKeys.PROFILE)
 async def show_profile(
-    message: Message,
+    message: Union[Message, CallbackQuery],
     user: FromDishka[UserEntity],
 ):
     """
     Показывает информацию о пользователе
     """
-
+    text_message = profile_text(user)
     try:
-        text_message = f"👤 <b>Ваш профиль HH.ru</b>\n\n{user}"
-        chunks_message = split_long_message(text_message)
-        for mess in chunks_message:
-            await message.answer(mess)
+        if isinstance(message, Message):
+            await message.answer(text_message)
+            return
+        await message.answer()
+        await message.message.answer(text_message)
     except Exception as e:
         await message.answer(
             f"⚠️ Ошибка при получении профиля: {str(e)}\n"
@@ -33,12 +37,17 @@ async def show_profile(
 
 
 @router.message(Command("logout"))
-async def logout(message: Message, state: FSMContext):
+@router.callback_query(F.data == CallbackKeys.LOGOUT)
+async def logout(message: Union[Message, CallbackQuery], state: FSMContext):
     """
     Выход из аккаунта (очистка информации о пользователе их FSMContext).
     """
     await state.set_data({StorageKeys.USER_INFO: None})
-
-    await message.answer(
+    text_message = (
         "👋 Вы успешно вышли из аккаунта.\n\n" "Для повторной работы используйте /start"
     )
+    if isinstance(message, Message):
+        await message.answer(text_message)
+        return
+    await message.answer()
+    await message.message.answer(text_message)
