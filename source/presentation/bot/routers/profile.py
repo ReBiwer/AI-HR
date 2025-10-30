@@ -17,18 +17,22 @@ router = Router()
 @router.callback_query(F.data == CallbackKeys.PROFILE)
 async def show_profile(
     message: Union[Message, CallbackQuery],
-    user: FromDishka[UserEntity],
+    user: FromDishka[Union[UserEntity | None]],
 ):
     """
     Показывает информацию о пользователе
     """
-    text_message = profile_text(user)
     try:
+        if user is None:
+            raise PermissionError("Необходимо авторизоваться")
+        text_message = profile_text(user)
         if isinstance(message, Message):
             await message.answer(text_message)
             return
         await message.answer()
         await message.message.answer(text_message)
+    except PermissionError as e:
+        await message.answer(f"{str(e)}\n" "Перейдите в начало для авторизации: /start")
     except Exception as e:
         await message.answer(
             f"⚠️ Ошибка при получении профиля: {str(e)}\n"
