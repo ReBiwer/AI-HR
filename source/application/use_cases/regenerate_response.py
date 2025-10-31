@@ -21,7 +21,7 @@ class RegenerateResponseUseCase:
                 query.subject,
                 query.user_id,
                 vacancy_id,
-                query.resume_id,
+                query.resume_hh_id,
             )
             new_response = await self.ai_service.regenerate_response(
                 query.user_id, query.response, query.user_comments, data=data
