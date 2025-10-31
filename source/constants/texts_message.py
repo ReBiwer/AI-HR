@@ -2,23 +2,23 @@ from source.domain.entities.user import UserEntity
 
 
 class StartMessages:
-    @classmethod
-    def user_back(cls, user: UserEntity) -> str:
+    @staticmethod
+    def user_back(user: UserEntity) -> str:
         return (
             f"👋 С возвращением, {user.name}!\n\n"
             f"Вы уже авторизованы. Используйте /help для просмотра команд.\n\n"
         )
 
-    @classmethod
-    def user_authenticated(cls, user: UserEntity) -> str:
+    @staticmethod
+    def user_authenticated(user: UserEntity) -> str:
         return (
             f"✅ Отлично, {user.name}! Авторизация успешна.\n\n"
             f"Теперь вы можете использовать все функции бота.\n"
             f"Используйте /help для просмотра доступных команд."
         )
 
-    @classmethod
-    def user_not_authenticated(cls, auth_url: str) -> str:
+    @staticmethod
+    def user_not_authenticated(auth_url: str) -> str:
         return (
             f"👋 Добро пожаловать в бот для работы с HeadHunter!\n\n"
             "Для начала работы необходимо авторизоваться:\n"
@@ -31,3 +31,14 @@ class StartMessages:
             "• Работать с резюме (в разработке)\n"
             "• И многое другое!"
         )
+
+
+class ProfileMessages:
+    @staticmethod
+    def profile_base(user: UserEntity, active_resume_title: str | None = None) -> str:
+        if active_resume_title:
+            return (
+                f"👤 <b>Ваш профиль HH.ru</b>\n\n{user.name}\n"
+                f"Выбранно резюме: {active_resume_title}"
+            )
+        return f"👤 <b>Ваш профиль HH.ru</b>\n\n{user.name}"
