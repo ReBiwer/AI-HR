@@ -80,11 +80,11 @@ class AIService(IAIService):
 
     @staticmethod
     def _check_exist_response(state: AIServiceState) -> str:
-        if state["response"] is None and state["user_comments"] is None:
+        if "response" in state and "user_comments" in state:
             return "generate_response"
         return "regenerate_response"
 
-    async def _generate_response_node(self, state: AIServiceState) -> dict[str, str]:
+    async def _generate_response_node(self, state: AIServiceState) -> AIServiceState:
         prompt = PromptTemplate(
             input_variables=[
                 "vacancy",
@@ -110,7 +110,8 @@ class AIService(IAIService):
         message = HumanMessage(content=prompt.format(**state))
         try:
             response = await self.llm.ainvoke([message])
-            return {"response": response.text()}
+            state["response"] = response.content
+            return state
         except openai.NotFoundError as e:
             print(f"Ошибка отправки промтпа: {e}")
             raise
@@ -121,22 +122,20 @@ class AIService(IAIService):
                 "vacancy",
                 "resume",
                 "employer",
-                "good_responses",
+                # "good_responses",
                 "user_rules",
-                "response",
-                "user_comments",
+                # "response",
+                # "user_comments",
             ],
             template="""
             Ты мой помощник в написании сопроводительных писем.
-            Тебе нужно скорректировать сопроводительное составленное ранее {response}\n.
+
             В исправлении учитывай следующую информацию: \n
 
             1. описание вакансии {vacancy}\n
             2. мое резюме {resume};\n
             3. описание работодателя если оно есть {employer}\n
             4. мои правила по составлению сопроводительного {user_rules};\n
-            5. мои удачные отклики {good_responses}.\n
-            6. мои комментарии {user_comments}
 
             Также в конце нужно обязательно добавить абзац про мою мотивацию работы у работодателя
             опираясь на информацию из вакансии и описание работодателя (если оно есть)
@@ -158,8 +157,8 @@ class AIService(IAIService):
         result = await self._workflow.ainvoke(start_state, config=config)  # type: ignore
         return ResponseToVacancyEntity(
             url_vacancy=result["vacancy"].url_vacancy,
-            vacancy_id=result["vacancy"].id,
-            resume_id=result["resume"].id,
+            vacancy_hh_id=result["vacancy"].hh_id,
+            resume_hh_id=result["resume"].hh_id,
             message=result["response"],
         )
 
@@ -191,8 +190,8 @@ class AIService(IAIService):
 
         return ResponseToVacancyEntity(
             url_vacancy=result["vacancy"].url_vacancy,
-            vacancy_id=result["vacancy"].id,
-            resume_id=result["resume"].id,
+            vacancy_hh_id=result["vacancy"].id,
+            resume_hh_id=result["resume"].id,
             message=result["response"],
         )
 
