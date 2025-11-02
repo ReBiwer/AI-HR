@@ -296,7 +296,7 @@ class HHService(IHHService):
             self.get_employer_data(subject, vacancy_data.employer_id),
             self.get_resume_data(subject, resume_id),
             self.get_user_rules(),
-            self.get_good_responses(subject),
+            # self.get_good_responses(subject),
         ]
         result = await asyncio.gather(*tasks)
         return GenerateResponseData(
@@ -305,12 +305,12 @@ class HHService(IHHService):
             employer=result[0],
             resume=result[1],
             user_rules=result[2],
-            good_responses=result[3],
+            good_responses=None,
         )
 
     async def send_response_to_vacancy(self, response: ResponseToVacancyEntity) -> bool:
         return await self.hh_client.apply_to_vacancy(
-            resume_id=response.resume_id,
-            vacancy_id=response.vacancy_id,
+            resume_id=response.resume_hh_id,
+            vacancy_id=response.vacancy_hh_id,
             message=response.message,
         )
