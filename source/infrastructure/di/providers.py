@@ -9,6 +9,7 @@ from langgraph.checkpoint.memory import BaseCheckpointSaver
 from langgraph.checkpoint.redis import AsyncRedisSaver
 
 from source.constants.storage_keys import StorageKeys
+from source.domain.entities.resume import ResumeEntity
 from source.infrastructure.db.engine import async_session_maker
 from source.infrastructure.settings.app import app_settings
 from source.infrastructure.db.repositories.user import UserRepository
@@ -147,6 +148,27 @@ class BotProvider(Provider):
         data_state = await state.get_data()
         if StorageKeys.USER_INFO in data_state and data_state[StorageKeys.USER_INFO]:
             return UserEntity.model_validate_json(data_state[StorageKeys.USER_INFO])
+        return None
+
+    @provide
+    async def get_resume_user_bot(
+        self,
+        middleware_data: AiogramMiddlewareData,
+        uow: IUnitOfWork,
+        class_resume_repo: type[IResumeRepository],
+    ) -> Union[ResumeEntity | None]:
+        state: FSMContext = middleware_data.get("state")
+        data_state = await state.get_data()
+        if (
+            StorageKeys.ACTIVE_RESUME_ID in data_state
+            and data_state[StorageKeys.ACTIVE_RESUME_ID]
+        ):
+            async with uow as session:
+                resume_repo = class_resume_repo(session)
+                resume = await resume_repo.get(
+                    id=data_state[StorageKeys.ACTIVE_RESUME_ID]
+                )
+            return resume
         return None
 
     @provide
