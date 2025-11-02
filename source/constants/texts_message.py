@@ -42,3 +42,12 @@ class ProfileMessages:
                 f"Выбранно резюме: {active_resume_title}"
             )
         return f"👤 <b>Ваш профиль HH.ru</b>\n\n{user.name}"
+
+
+class AIMessages:
+    @staticmethod
+    def no_active_resume() -> str:
+        return (
+            "Нет активного резюме\n"
+            "Перейдите в профиль и выберите резюме, которым вы хотите откликаться /profile"
+        )
