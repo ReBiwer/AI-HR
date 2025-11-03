@@ -1,13 +1,8 @@
-"""
-Главный роутер бота, объединяющий все дочерние роутеры.
-
-Порядок подключения роутеров важен - они обрабатываются последовательно.
-"""
-
 from aiogram import Router
 from .start import router as start_router
 from .help import router as help_router
 from .profile import router as profile_router
+from .ai import router as ai_router
 
 main_router = Router()
 
@@ -16,4 +11,5 @@ main_router.include_routers(
     start_router,
     help_router,
     profile_router,
+    ai_router,
 )
