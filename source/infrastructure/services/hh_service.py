@@ -217,67 +217,6 @@ class HHService(IHHService):
         data = await self.hh_client.get_resume(resume_id, subject=subject)
         return self._serialize_data_resume(data)
 
-    async def get_good_responses(
-        self, subject: Optional[Subject], quantity_responses: int = 10
-    ) -> list[ResponseToVacancyEntity]:
-        cur_page = 0
-        invitations_responses = []
-        # запрашиваем отклики у которых статус interview/собеседование
-        while len(invitations_responses) < quantity_responses:
-            try:
-                coro_request = self.hh_client._request(
-                    "GET",
-                    "/negotiations",
-                    # фильтрация по статус invitations/Активные приглашения не работает
-                    # либо у меня нет таких откликов, либо нужно использовать другой статус (я его не нашел)
-                    params={
-                        "status": "active",
-                        "per_page": quantity_responses,
-                        "page": cur_page,
-                    },
-                    subject=subject,
-                )
-                data = (await asyncio.wait_for(coro_request, timeout=100)).json()
-                for item in data["items"]:
-                    # в список добавляются только те отклики, у которых статус interview/собеседование
-                    # и если список уже добавленных откликов не превышает переданный лимит
-                    if (
-                        item["state"]["id"] == "interview"
-                        and len(invitations_responses) < quantity_responses
-                    ):
-                        invitations_responses.append(item)
-                    # если длина собранных откликов уже соответствует, то останавливаем цикл
-                    elif len(invitations_responses) == quantity_responses:
-                        break
-                cur_page += 1
-            except asyncio.exceptions.TimeoutError:
-                # если выходит исключение, то новых откликов больше нет
-                break
-
-        # создаем корутины для подгрузки сообщений откликов
-        load_messages = [
-            self.hh_client._request(
-                "GET",
-                f"/negotiations/{response['id']}/messages",
-                subject=subject,
-            )
-            for response in invitations_responses
-        ]
-        # конкурентно выполняем каждый запрос на подгрузку сообщений
-        messages: list = await asyncio.gather(*load_messages)
-        # добавляем отклик (первое сообщение в переписке) в список
-        for response, mess in zip(invitations_responses, messages):
-            mess_data = mess.json()
-            if mess_data["items"][0]["author"]["participant_type"] == "employer":
-                del invitations_responses[invitations_responses.index(response)]
-                del messages[messages.index(mess)]
-                continue
-            response["message"] = mess_data["items"][0]["text"]
-        return [
-            self._serialize_data_response_to_vacancy(response)
-            for response in invitations_responses
-        ]
-
     async def get_user_rules(self) -> dict:
         rules = {
             "rule_1": "Длина отклика не более 800 символов. Допускается отклонение +- 20 символов"
@@ -296,7 +235,6 @@ class HHService(IHHService):
             self.get_employer_data(subject, vacancy_data.employer_id),
             self.get_resume_data(subject, resume_id),
             self.get_user_rules(),
-            # self.get_good_responses(subject),
         ]
         result = await asyncio.gather(*tasks)
         return GenerateResponseData(
@@ -305,7 +243,6 @@ class HHService(IHHService):
             employer=result[0],
             resume=result[1],
             user_rules=result[2],
-            good_responses=None,
         )
 
     async def send_response_to_vacancy(self, response: ResponseToVacancyEntity) -> bool:

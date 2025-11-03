@@ -41,19 +41,6 @@ async def test_get_employer_data(
     assert isinstance(result, EmployerEntity)
 
 
-async def test_get_good_responses(
-    hh_service: HHService,
-    test_user_entity: UserEntity,
-    test_settings: TestAppSettings,
-):
-    result = await hh_service.get_good_responses(
-        test_user_entity.hh_id, quantity_responses=1
-    )
-    assert result
-    assert isinstance(result, list)
-    assert isinstance(result[0], ResponseToVacancyEntity)
-
-
 async def test_data_collect_for_llm(
     hh_service: HHService,
     test_user_entity: UserEntity,

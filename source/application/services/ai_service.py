@@ -12,7 +12,6 @@ class GenerateResponseData(TypedDict):
     vacancy: VacancyEntity
     resume: ResumeEntity
     employer: EmployerEntity | None
-    good_responses: list[ResponseToVacancyEntity] | None
     user_rules: dict
 
 

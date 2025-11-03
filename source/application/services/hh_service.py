@@ -168,13 +168,6 @@ class IHHService(ABC):
         ...
 
     @abstractmethod
-    async def get_good_responses(
-        self, subject: Union[int, str], quantity_responses: int = 10
-    ) -> list[ResponseToVacancyEntity]:
-        """Метод для получения определенного количества удачных откликов"""
-        ...
-
-    @abstractmethod
     async def get_user_rules(self) -> dict:
         """Метод для получения правил пользователя для формирования отклика"""
         ...
