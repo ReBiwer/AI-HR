@@ -81,16 +81,16 @@ class AIService(IAIService):
     @staticmethod
     def _check_exist_response(state: AIServiceState) -> str:
         if "response" in state and "user_comments" in state:
-            return "generate_response"
-        return "regenerate_response"
+            return "regenerate_response"
+        return "generate_response"
 
-    async def _generate_response_node(self, state: AIServiceState) -> AIServiceState:
+    async def _generate_response_node(self, state: AIServiceState) -> dict[str, str]:
         prompt = PromptTemplate(
             input_variables=[
                 "vacancy",
                 "resume",
                 "employer",
-                "good_responses",
+                # "good_responses",
                 "user_rules",
             ],
             template="""
@@ -100,8 +100,7 @@ class AIService(IAIService):
 
             1. мое резюме {resume};\n
             2. описание работодателя если оно есть {employer}\n
-            3. мои удачные отклики {good_responses}.\n
-            4. мои правила по составлению сопроводительного {user_rules};\n
+            3. мои правила по составлению сопроводительного {user_rules};\n
 
             Также в конце нужно обязательно добавить абзац про мою мотивацию работы у работодателя
             опираясь на информацию из вакансии и описание работодателя (если оно есть).
@@ -110,8 +109,7 @@ class AIService(IAIService):
         message = HumanMessage(content=prompt.format(**state))
         try:
             response = await self.llm.ainvoke([message])
-            state["response"] = response.content
-            return state
+            return {"response": response.content}
         except openai.NotFoundError as e:
             print(f"Ошибка отправки промтпа: {e}")
             raise
@@ -124,27 +122,25 @@ class AIService(IAIService):
                 "employer",
                 # "good_responses",
                 "user_rules",
-                # "response",
-                # "user_comments",
+                "response",
+                "user_comments",
             ],
             template="""
             Ты мой помощник в написании сопроводительных писем.
-
+            Скорректируй этот ответ: {response}\n
             В исправлении учитывай следующую информацию: \n
 
-            1. описание вакансии {vacancy}\n
-            2. мое резюме {resume};\n
-            3. описание работодателя если оно есть {employer}\n
-            4. мои правила по составлению сопроводительного {user_rules};\n
-
-            Также в конце нужно обязательно добавить абзац про мою мотивацию работы у работодателя
-            опираясь на информацию из вакансии и описание работодателя (если оно есть)
+            1. мои замечания {user_comments}\n
+            2. описание вакансии {vacancy}\n
+            3. мое резюме {resume};\n
+            4. описание работодателя если оно есть {employer}\n
+            5. мои правила по составлению сопроводительного {user_rules};\n
             """,
         )
         message = HumanMessage(content=prompt.format(**state))
         try:
             response = await self.llm.ainvoke([message])
-            return {"response": response.text()}
+            return {"response": response.content}
         except openai.NotFoundError as e:
             print(f"Ошибка отправки промтпа: {e}")
             raise
@@ -171,15 +167,16 @@ class AIService(IAIService):
     ) -> ResponseToVacancyEntity:
         config = self._get_config(user_id)
         if not data:
-            state: AIServiceState | None = self._workflow.get_state(config=config)  # type: ignore
+            state = await self._workflow.aget_state(config)
 
             if not state.values:
                 raise ValueError(
                     "Не найдено сохраненного состояния. Необходимо собрать актуальную информацию"
                 )
-
+            state_data = state.values
+            state_data.update({"response": response, "user_comments": user_comments})
             result = await self._workflow.ainvoke(
-                {"response": response, "user_comments": user_comments},  # type: ignore
+                state_data,
                 config,
             )
         else:
@@ -190,22 +187,7 @@ class AIService(IAIService):
 
         return ResponseToVacancyEntity(
             url_vacancy=result["vacancy"].url_vacancy,
-            vacancy_hh_id=result["vacancy"].id,
-            resume_hh_id=result["resume"].id,
+            vacancy_hh_id=result["vacancy"].hh_id,
+            resume_hh_id=result["resume"].hh_id,
             message=result["response"],
         )
-
-
-if __name__ == "__main__":
-    import asyncio
-    from langgraph.checkpoint.redis import AsyncRedisSaver
-
-    async def main():
-        async with AsyncRedisSaver.from_conn_string(
-            app_settings.redis_url,
-            ttl={"default_ttl": app_settings.REDIS_CHECKPOINT_TTL},
-        ) as checkpointer:
-            await checkpointer.asetup()
-            AIService(checkpointer)
-
-    asyncio.run(main())
