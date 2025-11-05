@@ -38,3 +38,11 @@ def resumes_keyboard(
         )
     builder.adjust(2)
     return builder.as_markup()
+
+
+def send_or_regenerate_ai_response() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Переделать", callback_data=CallbackKeys.REGENERATE_AI_RESPONSE)
+    builder.button(text="Отправить", callback_data=CallbackKeys.SEND_AI_RESPONSE)
+    builder.adjust(1)
+    return builder.as_markup()
