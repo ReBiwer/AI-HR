@@ -51,3 +51,7 @@ class AIMessages:
             "Нет активного резюме\n"
             "Перейдите в профиль и выберите резюме, которым вы хотите откликаться /profile"
         )
+
+    @staticmethod
+    def request_user_comments() -> str:
+        return "Что нужно изменить в отклике?"
