@@ -9,7 +9,7 @@ from dishka import FromDishka
 
 from source.application.use_cases.bot.authorization import AuthUseCase
 from source.presentation.bot.keyboards.inline import profile_keyboard
-from source.constants.storage_keys import StorageKeys
+from source.constants.keys import StorageKeys
 from source.constants.texts_message import StartMessages
 from source.application.services.hh_service import IHHService
 from source.domain.entities.user import UserEntity

@@ -3,7 +3,7 @@ from pydantic import Field
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardMarkup
 from aiogram.filters.callback_data import CallbackData
 
-from source.constants.storage_keys import CallbackKeys
+from source.constants.keys import CallbackKeys
 from source.domain.entities.resume import ResumeEntity
 
 

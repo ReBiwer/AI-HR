@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from dishka import FromDishka
 
 from source.constants.texts_message import ProfileMessages
-from source.constants.storage_keys import StorageKeys, CallbackKeys
+from source.constants.keys import StorageKeys, CallbackKeys
 from source.presentation.bot.keyboards.inline import resumes_keyboard, ResumeCallback
 from source.domain.entities.user import UserEntity
 
