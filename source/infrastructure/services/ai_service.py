@@ -20,7 +20,6 @@ class AIServiceState(TypedDict):
     vacancy: VacancyEntity
     resume: ResumeEntity
     employer: EmployerEntity
-    good_responses: list[ResponseToVacancyEntity]
     user_rules: dict
     response: str | None
     user_comments: str | None
@@ -41,7 +40,9 @@ def gen_png_graph(
 
 
 class AIService(IAIService):
-    def __init__(self, checkpointer: BaseCheckpointSaver):
+    def __init__(
+        self, checkpointer: BaseCheckpointSaver, create_png_graph: bool = False
+    ):
         self.llm = ChatOpenAI(
             model=app_settings.OPENAI_MODEL,
             temperature=0.7,
@@ -49,7 +50,8 @@ class AIService(IAIService):
             base_url=app_settings.OPENROUTER_BASE_URL,
         )
         self._workflow = self._build_workflow(checkpointer)
-        gen_png_graph(self._workflow)
+        if create_png_graph:
+            gen_png_graph(self._workflow)
 
     @staticmethod
     def _get_config(user_id: int) -> RunnableConfig:
@@ -90,7 +92,6 @@ class AIService(IAIService):
                 "vacancy",
                 "resume",
                 "employer",
-                # "good_responses",
                 "user_rules",
             ],
             template="""
@@ -120,7 +121,6 @@ class AIService(IAIService):
                 "vacancy",
                 "resume",
                 "employer",
-                # "good_responses",
                 "user_rules",
                 "response",
                 "user_comments",
