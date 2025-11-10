@@ -6,6 +6,7 @@ class AppSettings(BaseSettings):
     # Базовые настройки приложения
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent.parent
     BOT_TOKEN: str
+    BOT_USERNAME: str
     WEBHOOK_PATH: str
     WEBHOOK_URL: str
     BOT_APP_HOST: str
