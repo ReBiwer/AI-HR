@@ -50,7 +50,7 @@ addopts = [
     "-s",                               # отоброжение print'ов
     "--tb=short",                       # короткий traceback
     "--strict-markers",                 # строгая проверка маркеров
-    "--disable-warnings",               # отключить предупреждения
+#    "--disable-warnings",               # отключить предупреждения
     "--color=yes",                      # цветной вывод
     # Playwright defaults
     "--browser=chromium",
