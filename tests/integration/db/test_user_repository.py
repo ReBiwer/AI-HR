@@ -25,9 +25,10 @@ async def test_get_user(user_repo: UserRepository, test_user_entity: UserEntity)
 
 
 async def test_update_user(user_repo: UserRepository, test_user_entity: UserEntity):
-    new_user = await user_repo.create(test_user_entity)
+    new_user: UserEntity = await user_repo.create(test_user_entity)
     test_user_entity.id = new_user.id
     test_user_entity.name = "Vladimir"
+    test_user_entity.resumes = new_user.resumes
     updated_user: UserEntity = await user_repo.update(test_user_entity)
     assert updated_user
     assert updated_user.name == "Vladimir"

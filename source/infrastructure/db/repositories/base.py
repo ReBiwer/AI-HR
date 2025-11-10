@@ -1,16 +1,304 @@
-from sqlalchemy import select
+from types import UnionType
+from typing import Any, Dict, Set, get_args, get_origin, Union
 
-from source.infrastructure.db.models.base import BaseModel
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic.fields import FieldInfo
+from sqlalchemy import select, inspect
+
 from source.application.repositories.base import ISQLRepository
 from source.domain.entities.base import BaseEntity
+from source.infrastructure.db.models.base import BaseModel
 
 
 class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET]):
     model_class: type[DBModel]
     entity_class: type[ET]
 
+    def inspect_model(
+        self,
+        *,
+        model_class: type[BaseModel] = None,
+        excluded_class: type[BaseModel] | None = None,
+        _visited: Set[type[BaseModel]] | None = None,
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Собирает структуру связей для ORM-модели (model_class переданный в атрибутах класса).
+
+        Возвращает словарь вида:
+        {
+            "relation_name": {
+                "module": "python module",
+                "model": "ClassName",
+                "direction": "ONETOMANY",
+                "uselist": True,
+                "relations": { ... рекурсивный результат ... }
+            },
+            ...
+        }
+        """
+        inspected_model_class = model_class if model_class else self.model_class
+        mapper = inspect(inspected_model_class)
+        visited = set() if _visited is None else set(_visited)
+        visited.add(inspected_model_class)
+
+        relations: Dict[str, Dict[str, Any]] = {}
+
+        for rel_key, rel in sorted(
+            mapper.relationships.items(), key=lambda item: item[0]
+        ):
+            target_cls = rel.mapper.class_
+
+            if excluded_class is not None and target_cls is excluded_class:
+                continue
+
+            if target_cls in visited:
+                # Связь ведёт к классу, который уже присутствует в текущей ветке.
+                # Пропускаем, чтобы не дублировать родителя/предка в выдаче.
+                continue
+
+            relation_info: Dict[str, Any] = {
+                "module": target_cls.__module__,
+                "model": target_cls,
+                "direction": rel.direction.name,
+                "uselist": rel.uselist,
+                "relations": self.inspect_model(
+                    model_class=target_cls,
+                    excluded_class=excluded_class,
+                    _visited=visited | {target_cls},
+                ),
+            }
+
+            relations[rel_key] = relation_info
+
+        return relations
+
+    def inspect_entity(
+        self,
+        *,
+        entity_class: type[BaseEntity] = None,
+        excluded_class: type[BaseEntity] | None = None,
+        _visited: Set[type[BaseEntity]] | None = None,
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Собирает структуру связей для pydantic-модели (model_entity переданный в атрибутах класса).
+
+        Возвращает словарь вида:
+        {
+            "relation_name": {
+                "module": "python module",
+                "model": "ClassName",
+                "uselist": True,
+                "relations": { ... рекурсивный результат ... }
+            },
+            ...
+        }
+        """
+        inspected_entity_class = entity_class if entity_class else self.entity_class
+        visited = set() if _visited is None else set(_visited)
+        visited.add(inspected_entity_class)
+
+        relations: Dict[str, Dict[str, Any]] = {}
+
+        def _unwrap(annotation: Any) -> Any:
+            """
+            Приводит аннотацию к базовому типу.
+
+            Убирает Optional/Union, оставляя единственный не-None аргумент.
+            Для сложных Union возвращает исходную аннотацию как есть.
+            """
+            origin = get_origin(annotation)
+            if origin in {Union, UnionType}:
+                args = [arg for arg in get_args(annotation) if arg is not type(None)]
+                if len(args) == 1:
+                    return _unwrap(args[0])
+                return annotation
+            return annotation
+
+        def _extract_target(field_info: FieldInfo) -> tuple[type[Any], bool] | None:
+            """
+            Определяет целевой тип поля и признак коллекции.
+
+            Возвращает кортеж (target_cls, is_collection) либо None,
+            если поле нельзя рассматривать как связь.
+            """
+            annotation = _unwrap(field_info.annotation)
+            origin = get_origin(annotation)
+
+            # Коллекции (list, set, tuple) рассматриваем как множественные связи.
+            if origin in {list, set, tuple}:
+                args = get_args(annotation)
+                if len(args) != 1:
+                    return None
+                target_annotation = _unwrap(args[0])
+                if isinstance(target_annotation, type):
+                    return target_annotation, True
+                return None
+
+            if isinstance(annotation, type):
+                return annotation, False
+
+            return None
+
+        for field_name in sorted(inspected_entity_class.model_fields):
+            field_info: FieldInfo = inspected_entity_class.model_fields[field_name]
+
+            extracted = _extract_target(field_info)
+            if extracted is None:
+                continue
+
+            target_cls, is_collection = extracted
+
+            if not isinstance(target_cls, type):
+                continue
+
+            if not issubclass(target_cls, PydanticBaseModel):
+                continue
+
+            if excluded_class is not None and target_cls is excluded_class:
+                continue
+
+            if target_cls in visited:
+                # Избегаем повторного добавления класса, который уже присутствует в ветке.
+                continue
+
+            relation_info: Dict[str, Any] = {
+                "module": target_cls.__module__,
+                "model": target_cls,
+                "uselist": is_collection,
+                "relations": {},
+            }
+
+            if issubclass(target_cls, BaseEntity):
+                relation_info["relations"] = self.inspect_entity(
+                    entity_class=target_cls,
+                    excluded_class=excluded_class,
+                    _visited=visited | {target_cls},
+                )
+
+            relations[field_name] = relation_info
+
+        return relations
+
+    def get_nested_relations(
+        self,
+    ) -> Dict[str, tuple[type[BaseModel], type[BaseEntity]]]:
+        """
+        Функция для получения словаря для маппинга ORM модели и BaseEntity сущности
+
+        Возвращает словарь с общим ключ для BaseModel и BaseEntity
+        """
+        entity_inspect_dict = self.inspect_entity()
+        model_inspect_dict = self.inspect_model()
+        nested_dict = dict()
+
+        def _collect_data(
+            entity_dict: Dict[str, Dict[str, Any]],
+            model_dict: Dict[str, Dict[str, Any]],
+        ):
+            collect_dict = dict()
+            for key_entity in entity_dict.keys():
+                if key_entity in model_dict.keys():
+                    collect_dict[key_entity] = (
+                        model_dict[key_entity]["model"],
+                        entity_dict[key_entity]["model"],
+                    )
+                if (
+                    entity_dict[key_entity]["relations"] is not None
+                    and model_dict[key_entity]["relations"] is not None
+                ):
+                    collect_dict.update(
+                        _collect_data(
+                            entity_dict[key_entity]["relations"],
+                            model_dict[key_entity]["relations"],
+                        )
+                    )
+            return collect_dict
+
+        nested_dict.update(_collect_data(entity_inspect_dict, model_inspect_dict))
+        return nested_dict
+
+    def _update_nested_model(
+        self,
+        nested_entity: BaseEntity,
+        key_nested_entity: str,
+        nested_relations: Dict[str, tuple[type[BaseModel], type[BaseEntity]]],
+    ) -> BaseModel:
+        # извлечение связи классов ORM модели и BaseEntity
+        nested_model_cls, _ = nested_relations.pop(key_nested_entity)
+        # словарь куда будет собираться все sub nested ORM модели
+        nested_data_model = dict()
+        # множество ключей, которые оказались sub nested ORM моделями
+        dump_exclude_keys = set()
+
+        for key, field_info in nested_entity.__class__.model_fields.items():
+            # если ключ есть во вложенных связях, значит берем этот атрибут в обработку
+            if key in nested_relations:
+                # добавляем этот ключ в исключения
+                dump_exclude_keys.add(key)
+                # получаем атрибут вложенной сущности (может быть просто другой сущностью или же списком сущностей)
+                sub_nested_entity: BaseEntity | list[BaseEntity] = getattr(
+                    nested_entity, key
+                )
+
+                # если это список сущностей, то итерируемся по каждой и
+                # рекурсивно получаем экземпляры соответствующих ORM моделей
+                if isinstance(sub_nested_entity, list):
+                    sub_nested_models = [
+                        self._update_nested_model(sub_entity, key, nested_relations)
+                        for sub_entity in sub_nested_entity
+                    ]
+                    # сохраняем в словарь с данными для конечной валидации модели
+                    nested_data_model[key] = sub_nested_models
+                # если атрибутом оказался экземпляр другой сущности,
+                # то просто делаем dump и получаем экземпляр ORM модели
+                else:
+                    # получаем ORM модель соответствующей данной сущности
+                    sub_nested_model_cls, _ = nested_relations[key]
+                    sub_nested_model = sub_nested_model_cls(
+                        **sub_nested_entity.model_dump()
+                    )
+                    # сохраняем в словарь с данными для конечной валидации модели
+                    nested_data_model[key] = sub_nested_model
+
+        nested_data_model.update(nested_entity.model_dump(exclude=dump_exclude_keys))
+        return nested_model_cls(**nested_data_model)
+
     def _validate_entity_to_db_model(self, data: ET) -> DBModel:
-        raise NotImplementedError
+        """
+        Метод для получения экземпляра ORM модели из BaseEntity
+        со всеми вложенными связями с другими ORM моделями
+        """
+        # тут будет хранится вся информация для инстанса ORM модели
+        data_model_instance = dict()
+        dump_exclude_keys = set()
+        data_entity = data.model_dump()
+        nested_relations = self.get_nested_relations()
+
+        for key, value in data_entity.items():
+            if not isinstance(value, list):
+                if not isinstance(value, BaseEntity):
+                    data_model_instance[key] = value
+                else:
+                    nested_model_data = getattr(data, key)
+                    nested_model_cls, _ = nested_relations[key]
+                    nested_model = nested_model_cls(**nested_model_data)
+                    data_model_instance[key] = nested_model
+
+            else:
+                dump_exclude_keys.add(key)
+                _, nested_entity_cls = nested_relations[key]
+                nested_entity_instances = (
+                    nested_entity_cls.model_validate(data_nested_entity)
+                    for data_nested_entity in value
+                )
+                nested_entities = [
+                    self._update_nested_model(nested_entity_inst, key, nested_relations)
+                    for nested_entity_inst in nested_entity_instances
+                ]
+                data_model_instance[key] = nested_entities
+
+        data_model_instance.update(data.model_dump(exclude=dump_exclude_keys))
+        return self.model_class(**data_model_instance)
 
     async def _check_exist_entity(self, data: ET) -> DBModel | None:
         raise NotImplementedError
@@ -38,13 +326,7 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
             msg = f"Невозможно обновить {self.entity_class.__name__} без идентификатора"
             raise ValueError(msg)
 
-        model_instance = await self.session.get(self.model_class, entity.id)
-        update_data = entity.model_dump(exclude_unset=True)
-
-        for key, value in update_data.items():
-            if not isinstance(key, BaseModel.__class__) and not isinstance(value, list):
-                setattr(model_instance, key, value)
-
+        model_instance = self._validate_entity_to_db_model(entity)
         await self.session.flush()
         return self.entity_class.model_validate(model_instance.dump_dict())
 
