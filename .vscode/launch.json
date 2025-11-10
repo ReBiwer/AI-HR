@@ -2,6 +2,19 @@
     "version": "0.2.0",
     "configurations": [
       {
+        "name": "Run current file",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${file}",
+        "cwd": "/home/vladimir/Projects/AI-HR",
+        "python": "/home/vladimir/Projects/AI-HR/.venv/bin/python",
+        "env": {
+          "PYTHONPATH": "/home/vladimir/Projects/AI-HR"
+        },
+        "console": "integratedTerminal",
+        "justMyCode": true
+      },
+      {
         "name": "Run telegram",
         "type": "debugpy",
         "request": "launch",
