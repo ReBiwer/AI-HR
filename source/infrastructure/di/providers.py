@@ -51,7 +51,7 @@ class ServicesProviders(Provider):
 
     @provide
     def keyed_store(self) -> KeyedTokenStore:
-        redis_client = Redis()
+        redis_client = Redis.from_url(app_settings.redis_url)
         return RedisKeyedTokenStore(redis_client)
 
     @provide
@@ -65,8 +65,14 @@ class ServicesProviders(Provider):
         )
 
     @provide
-    def get_hh_service(self, token_manager: CustomTokenManager) -> IHHService:
-        return HHService(token_manager)
+    async def get_hh_service(
+        self, token_manager: CustomTokenManager
+    ) -> AsyncGenerator[IHHService | None]:
+        hh_service = HHService(token_manager)
+        try:
+            yield hh_service
+        finally:
+            await hh_service.aclose_hh_client()
 
     @provide
     async def get_checkpointer(self) -> AsyncGenerator[BaseCheckpointSaver, None]:
@@ -76,6 +82,7 @@ class ServicesProviders(Provider):
         ) as checkpointer:
             await checkpointer.asetup()
             yield checkpointer
+            await checkpointer.aclose()
 
     @provide
     def get_ai_service(self, checkpointer: BaseCheckpointSaver) -> IAIService:
@@ -120,9 +127,9 @@ class RepositoriesProviders(Provider):
     scope = Scope.REQUEST
 
     @provide
-    async def get_async_session(self) -> IUnitOfWork:
+    async def get_async_session(self) -> AsyncGenerator[IUnitOfWork, None]:
         async with async_session_maker() as session:
-            return UnitOfWork(session)
+            yield UnitOfWork(session)
 
     @provide
     def get_user_repository(self) -> type[IUserRepository]:

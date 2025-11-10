@@ -161,6 +161,9 @@ class HHService(IHHService):
     def get_auth_url(self, state: str):
         return self._hh_tm.authorization_url(state)
 
+    async def aclose_hh_client(self):
+        await self.hh_client.aclose()
+
     async def auth(self, code: str) -> tuple[UserEntity, AuthTokens]:
         tokens = await self._hh_tm.exchange_auth_code(code)
         resp = await self.hh_client.authorization(tokens)
