@@ -5,7 +5,7 @@ import logging.config
 PATH_LOGS = f"{Path(__file__).resolve().parent.parent}/logs"
 
 
-def setup_logging(root_log_level: str = logging.INFO, log_dir: str = PATH_LOGS):
+def setup_logging(root_log_level: int = logging.INFO, log_dir: str = PATH_LOGS):
     Path(log_dir).mkdir(parents=True, exist_ok=True)
 
     config = {
@@ -19,13 +19,13 @@ def setup_logging(root_log_level: str = logging.INFO, log_dir: str = PATH_LOGS):
         "handlers": {
             "console": {
                 "class": "logging.StreamHandler",
-                "level": "DEBUG",
+                "level": root_log_level,
                 "formatter": "default",
             },
             "console_stdout": {
                 "class": "logging.StreamHandler",
                 "stream": "ext://sys.stdout",  # Вывод не в stderr, а в stdout
-                "level": "INFO",
+                "level": root_log_level,
                 "formatter": "default",
             },
             "general_file": {

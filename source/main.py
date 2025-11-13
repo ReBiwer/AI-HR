@@ -34,7 +34,7 @@ if __name__ == "__main__":
     from source.common import setup_logging
     from source.infrastructure.settings.app import app_settings
 
-    setup_logging()
+    setup_logging(app_settings.LOG_LEVEl)
 
     parser = argparse.ArgumentParser(description="Какое приложение запускать")
     parser.add_argument(
