@@ -1,3 +1,4 @@
+import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -10,6 +11,8 @@ from source.presentation.bot.routers import main_router
 from source.infrastructure.settings.app import app_settings
 from source.infrastructure.di import init_di_container_bot
 
+logger = logging.getLogger(__name__)
+
 
 async def set_commands(bot: Bot):
     commands = [
@@ -20,6 +23,7 @@ async def set_commands(bot: Bot):
         BotCommand(command="logout", description="🚪 Выход"),
     ]
     await bot.set_my_commands(commands, BotCommandScopeDefault())
+    logger.debug("Commands bot's set")
 
 
 def create_storage():
@@ -28,6 +32,7 @@ def create_storage():
         storage = RedisStorage.from_url(
             app_settings.redis_url,
         )
+        logger.debug("Redis storage created")
         return storage
     else:
         return MemoryStorage()
@@ -60,4 +65,5 @@ async def run_bot():
 
     # Запускаем polling
     # skip_updates=True - пропускаем сообщения, которые пришли пока бот был оффлайн
+    logger.debug("Bot started")
     await dp.start_polling(bot)
