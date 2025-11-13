@@ -67,7 +67,7 @@ class ServicesProviders(Provider):
     @provide
     async def get_hh_service(
         self, token_manager: CustomTokenManager
-    ) -> AsyncGenerator[IHHService | None]:
+    ) -> AsyncGenerator[IHHService, None]:
         hh_service = HHService(token_manager)
         try:
             yield hh_service
