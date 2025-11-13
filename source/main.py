@@ -31,6 +31,9 @@ def create_web_app() -> FastAPI:
 
 if __name__ == "__main__":
     import argparse
+    from source.common import setup_logging
+
+    setup_logging()
 
     parser = argparse.ArgumentParser(description="Какое приложение запускать")
     parser.add_argument(
