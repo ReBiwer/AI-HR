@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -5,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class AppSettings(BaseSettings):
     # Базовые настройки приложения
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent.parent
+    LOG_LEVEl: str = logging.INFO
     BOT_TOKEN: str
     BOT_USERNAME: str
     WEBHOOK_PATH: str

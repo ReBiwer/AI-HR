@@ -32,6 +32,7 @@ def create_web_app() -> FastAPI:
 if __name__ == "__main__":
     import argparse
     from source.common import setup_logging
+    from source.infrastructure.settings.app import app_settings
 
     setup_logging()
 
