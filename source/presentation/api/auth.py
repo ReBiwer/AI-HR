@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 from fastapi import APIRouter, Query, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
@@ -14,6 +15,9 @@ router = APIRouter(
     tags=["auth"],
     route_class=DishkaRoute,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @router.get("/hh/oauth/url", name="get_oauth_url")
@@ -55,20 +59,25 @@ async def get_tokens(
     :return:
     """
     try:
+        logger.info("Обмен exchange token'а на access и refresh токены")
         redirect_url, tokens = await use_case(
             code, state, request, app_settings.HH_FAKE_SUBJECT
         )
         response = RedirectResponse(redirect_url)
         response.set_cookie("access_token", value=tokens["access_token"])
         response.set_cookie("refresh_token", value=tokens["refresh_token"])
+        logger.info("Токены получены")
         return response
     except ConnectionError:
-        # Ошибки соединения с API HeadHunter
+        logger.error("Ошибка соединения с API hh.ru")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Сервис HeadHunter временно недоступен. Попробуйте позже.",
         )
     except NoMatchFound as e:
+        logger.critical(
+            "Не корректно передан state=%s. Детали ошибки: %s", state, exc_info=e
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Не корректно передан {state=}. Детали ошибки: {e}",
@@ -92,6 +101,7 @@ async def get_tokens_for_test(
     :param hh_service: сервис для работы с API hh.ru
     :return:
     """
+    logger.warning("Используется тестовая ручка для получения access токена")
     if code:
         return (await hh_service.auth(code))[1]
 
