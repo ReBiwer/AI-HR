@@ -27,7 +27,6 @@ class RegenerateResponseUseCase:
             logger.debug("New ai response: %s", new_response.message)
             return new_response
         except ValueError:
-            logger.warning("Not saved state for user (subject): %s", query.subject)
             logger.debug("Input vacancy url: %s", query.url_vacancy)
             vacancy_id = self.hh_service.extract_vacancy_id_from_url(query.url_vacancy)
             logger.debug("Extracted vacancy id: %s", vacancy_id)
