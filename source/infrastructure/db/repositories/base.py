@@ -1,3 +1,4 @@
+import logging
 from types import UnionType
 from typing import Any, Dict, Set, get_args, get_origin, Union
 
@@ -8,6 +9,9 @@ from sqlalchemy import select, inspect
 from source.application.repositories.base import ISQLRepository
 from source.domain.entities.base import BaseEntity
 from source.infrastructure.db.models.base import BaseModel
+
+
+logger = logging.getLogger(__name__)
 
 
 class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET]):
@@ -36,6 +40,9 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
             ...
         }
         """
+        if _visited:
+            logger.debug("Entering recursion")
+        logger.debug("Inspected model: %s", model_class)
         inspected_model_class = model_class if model_class else self.model_class
         mapper = inspect(inspected_model_class)
         visited = set() if _visited is None else set(_visited)
@@ -56,6 +63,7 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
                 # Пропускаем, чтобы не дублировать родителя/предка в выдаче.
                 continue
 
+            logger.debug("Collected info")
             relation_info: Dict[str, Any] = {
                 "module": target_cls.__module__,
                 "model": target_cls,
@@ -69,7 +77,7 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
             }
 
             relations[rel_key] = relation_info
-
+        logger.debug("Returned info")
         return relations
 
     def inspect_entity(
@@ -93,6 +101,9 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
             ...
         }
         """
+        if _visited:
+            logger.debug("Entering recursion")
+        logger.debug("Inspected entity: %s", entity_class)
         inspected_entity_class = entity_class if entity_class else self.entity_class
         visited = set() if _visited is None else set(_visited)
         visited.add(inspected_entity_class)
@@ -161,6 +172,7 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
                 # Избегаем повторного добавления класса, который уже присутствует в ветке.
                 continue
 
+            logger.debug("Collected info")
             relation_info: Dict[str, Any] = {
                 "module": target_cls.__module__,
                 "model": target_cls,
@@ -176,7 +188,7 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
                 )
 
             relations[field_name] = relation_info
-
+        logger.debug("Returned info")
         return relations
 
     def get_nested_relations(
@@ -187,6 +199,11 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
 
         Возвращает словарь с общим ключ для BaseModel и BaseEntity
         """
+        logger.debug(
+            "Started collect nested relations to ORM model (%s) and entity (%s)",
+            self.model_class,
+            self.entity_class,
+        )
         entity_inspect_dict = self.inspect_entity()
         model_inspect_dict = self.inspect_model()
         nested_dict = dict()
@@ -195,6 +212,11 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
             entity_dict: Dict[str, Dict[str, Any]],
             model_dict: Dict[str, Dict[str, Any]],
         ):
+            logger.debug(
+                "Collected data: model=%s, entity=%s",
+                model_dict["model"],
+                entity_dict["model"],
+            )
             collect_dict = dict()
             for key_entity in entity_dict.keys():
                 if key_entity in model_dict.keys():
@@ -212,9 +234,11 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
                             model_dict[key_entity]["relations"],
                         )
                     )
+            logger.debug("returned data")
             return collect_dict
 
         nested_dict.update(_collect_data(entity_inspect_dict, model_inspect_dict))
+        logger.debug("End collect nested relations")
         return nested_dict
 
     def _update_nested_model(
@@ -225,6 +249,7 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
     ) -> BaseModel:
         # извлечение связи классов ORM модели и BaseEntity
         nested_model_cls, _ = nested_relations.pop(key_nested_entity)
+        logger.debug("Updated nested model=%s", nested_model_cls)
         # словарь куда будет собираться все sub nested ORM модели
         nested_data_model = dict()
         # множество ключей, которые оказались sub nested ORM моделями
@@ -243,6 +268,7 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
                 # если это список сущностей, то итерируемся по каждой и
                 # рекурсивно получаем экземпляры соответствующих ORM моделей
                 if isinstance(sub_nested_entity, list):
+                    logger.debug("Entering recursion")
                     sub_nested_models = [
                         self._update_nested_model(sub_entity, key, nested_relations)
                         for sub_entity in sub_nested_entity
@@ -261,6 +287,7 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
                     nested_data_model[key] = sub_nested_model
 
         nested_data_model.update(nested_entity.model_dump(exclude=dump_exclude_keys))
+        logger.debug("Returned updated nested model=%s", nested_model_cls)
         return nested_model_cls(**nested_data_model)
 
     def _validate_entity_to_db_model(self, data: ET) -> DBModel:
@@ -269,6 +296,7 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
         со всеми вложенными связями с другими ORM моделями
         """
         # тут будет хранится вся информация для инстанса ORM модели
+        logger.debug("Started validate entity=%s", self.entity_class)
         data_model_instance = dict()
         dump_exclude_keys = set()
         data_entity = data.model_dump()
@@ -298,39 +326,55 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
                 data_model_instance[key] = nested_entities
 
         data_model_instance.update(data.model_dump(exclude=dump_exclude_keys))
+        logger.debug("End validate entity=%s", self.entity_class)
         return self.model_class(**data_model_instance)
 
     async def _check_exist_entity(self, data: ET) -> DBModel | None:
         raise NotImplementedError
 
     async def get(self, **filters) -> ET | None:
+        logger.debug("Selecting instance %s with filters=%s", self.model_class, filters)
         stmt = select(self.model_class).filter_by(**filters)
         result = await self.session.execute(stmt)
         model_instance = result.scalar_one_or_none()
         if model_instance:
+            logger.debug("Return instance %s", self.model_class)
             return self.entity_class.model_validate(model_instance.dump_dict())
+        logger.debug("Instance %s not found", self.model_class)
         return None
 
     async def create(self, entity: ET) -> ET:
+        logger.debug(
+            "Create instance ORM model %s from entity=%s",
+            self.model_class,
+            self.entity_class,
+        )
         existing_instance = await self._check_exist_entity(entity)
         if existing_instance:
+            logger.debug("Instance exist in DB, return data=%s", existing_instance)
             return self.entity_class.model_validate(existing_instance.dump_dict())
 
         model_instance = self._validate_entity_to_db_model(entity)
+        logger.debug("Instance ORM model created")
         self.session.add(model_instance)
         await self.session.flush()
+        logger.debug("Instance added to session")
         return self.entity_class.model_validate(model_instance.dump_dict())
 
     async def update(self, entity: ET) -> ET:
         if entity.id is None:
+            logger.debug("Entity %s does not exist", entity)
             msg = f"Невозможно обновить {self.entity_class.__name__} без идентификатора"
             raise ValueError(msg)
 
         model_instance = self._validate_entity_to_db_model(entity)
         await self.session.flush()
+        logger.debug("Instance added to session")
         return self.entity_class.model_validate(model_instance.dump_dict())
 
     async def delete(self, id_entity: int) -> None:
         model_instance = await self.session.get(self.model_class, id_entity)
         if model_instance:
             await self.session.delete(model_instance)
+            logger.debug("Instance deleted")
+        logger.debug("Instance %s not found", self.model_class)
