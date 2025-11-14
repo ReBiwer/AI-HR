@@ -1,5 +1,10 @@
-import openai
+import asyncio
+import logging
+import random
 from typing import TypedDict
+
+import openai
+from langchain_core.messages.base import BaseMessage
 from langchain.prompts import PromptTemplate
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
@@ -16,6 +21,9 @@ from source.domain.entities.resume import ResumeEntity
 from source.domain.entities.employer import EmployerEntity
 
 
+logger = logging.getLogger(__name__)
+
+
 class AIServiceState(TypedDict):
     vacancy: VacancyEntity
     resume: ResumeEntity
@@ -26,16 +34,17 @@ class AIServiceState(TypedDict):
 
 
 def gen_png_graph(
-    app_obj, name_photo: str = f"{app_settings.BASE_DIR}/schema_graph.png"
+    app_obj, schema_path: str = f"{app_settings.BASE_DIR}/schema_graph.png"
 ) -> None:
     """
     Генерирует PNG-изображение графа и сохраняет его в файл.
 
     Args:
         app_obj: Скомпилированный объект графа
-        name_photo: Имя файла для сохранения (по умолчанию "schema_graph.png" в директории проекта)
+        schema_path: Имя файла для сохранения (по умолчанию "schema_graph.png" в директории проекта)
     """
-    with open(name_photo, "wb") as f:
+    logger.debug("Generate schema graph in path='%s'", schema_path)
+    with open(schema_path, "wb") as f:
         f.write(app_obj.get_graph().draw_mermaid_png())
 
 
@@ -43,6 +52,11 @@ class AIService(IAIService):
     def __init__(
         self, checkpointer: BaseCheckpointSaver, create_png_graph: bool = False
     ):
+        logger.debug(
+            "Инициализация LLM модели: %s\n" "Base URL модели: %s",
+            app_settings.OPENAI_MODEL,
+            app_settings.OPENROUTER_BASE_URL,
+        )
         self.llm = ChatOpenAI(
             model=app_settings.OPENAI_MODEL,
             temperature=0.7,
@@ -50,6 +64,7 @@ class AIService(IAIService):
             base_url=app_settings.OPENROUTER_BASE_URL,
         )
         self._workflow = self._build_workflow(checkpointer)
+        logger.debug("The workflow is built")
         if create_png_graph:
             gen_png_graph(self._workflow)
 
@@ -86,6 +101,100 @@ class AIService(IAIService):
             return "regenerate_response"
         return "generate_response"
 
+    async def _request_llm(self, messages: list[BaseMessage]) -> BaseMessage | None:
+        """
+        Отправляет запрос к LLM с экспоненциальными ретраями и,
+        где это возможно, восстанавливается после временных сбоев.
+        """
+        max_attempts = 5
+        base_delay = 0.5
+        max_delay = 8.0
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                logger.debug("LLM request attempt=%s", attempt)
+                return await self.llm.ainvoke(messages)
+            except openai.BadRequestError as e:
+                logger.error(
+                    "LLM отклонил запрос: вероятно, ошибка в промпте или параметрах. "
+                    "request_id=%s",
+                    getattr(e, "request_id", None),
+                    exc_info=e,
+                )
+                raise
+            except openai.AuthenticationError as e:
+                logger.critical(
+                    "LLM отклонил запрос из-за авторизации. Проверь API-ключ/лимиты. "
+                    "request_id=%s",
+                    getattr(e, "request_id", None),
+                    exc_info=e,
+                )
+                raise
+            except openai.NotFoundError as e:
+                logger.error(
+                    "LLM не смог найти указанный ресурс (модель или эндпоинт). "
+                    "request_id=%s",
+                    getattr(e, "request_id", None),
+                    exc_info=e,
+                )
+                raise
+            except openai.APIStatusError as e:
+                status_code = e.status_code or 0
+                if status_code < 500:
+                    logger.error(
+                        "LLM вернул контролируемый статус %s, повтор не имеет смысла. "
+                        "request_id=%s",
+                        status_code,
+                        getattr(e, "request_id", None),
+                        exc_info=e,
+                    )
+                    raise
+                logger.warning(
+                    "LLM вернул статус %s. Повтор запроса (attempt=%s/%s). request_id=%s",
+                    status_code,
+                    attempt,
+                    max_attempts,
+                    getattr(e, "request_id", None),
+                    exc_info=e,
+                )
+            except (
+                openai.APIConnectionError,
+                openai.APITimeoutError,
+                openai.RateLimitError,
+                asyncio.TimeoutError,
+            ) as e:
+                logger.warning(
+                    "Временный сбой при обращении к LLM. Повтор запроса "
+                    "(attempt=%s/%s). request_id=%s",
+                    attempt,
+                    max_attempts,
+                    getattr(e, "request_id", None),
+                    exc_info=e,
+                )
+            except openai.OpenAIError as e:
+                logger.exception(
+                    "Непредвиденная ошибка OpenAI SDK. request_id=%s",
+                    getattr(e, "request_id", None),
+                )
+                raise
+
+            if attempt == max_attempts:
+                logger.error(
+                    "LLM-запрос не удался после %s попыток. Сообщаем об ошибке наверх.",
+                    max_attempts,
+                )
+                raise
+
+            exponential_delay = min(base_delay * (2 ** (attempt - 1)), max_delay)
+            jitter = random.uniform(0, base_delay)
+            sleep_for = exponential_delay + jitter
+            logger.debug(
+                "Ожидаем %.2f секунд перед следующим повтором LLM-запроса", sleep_for
+            )
+            await asyncio.sleep(sleep_for)
+
+        return None
+
     async def _generate_response_node(self, state: AIServiceState) -> dict[str, str]:
         prompt = PromptTemplate(
             input_variables=[
@@ -108,12 +217,9 @@ class AIService(IAIService):
             """,
         )
         message = HumanMessage(content=prompt.format(**state))
-        try:
-            response = await self.llm.ainvoke([message])
-            return {"response": response.content}
-        except openai.NotFoundError as e:
-            print(f"Ошибка отправки промтпа: {e}")
-            raise
+        logger.debug("Prompt formatted: %s", message.content[:50])
+        response = await self._request_llm([message])
+        return {"response": response.content}
 
     async def _regenerate_response_node(self, state: AIServiceState) -> dict[str, str]:
         prompt = PromptTemplate(
@@ -138,19 +244,20 @@ class AIService(IAIService):
             """,
         )
         message = HumanMessage(content=prompt.format(**state))
-        try:
-            response = await self.llm.ainvoke([message])
-            return {"response": response.content}
-        except openai.NotFoundError as e:
-            print(f"Ошибка отправки промтпа: {e}")
-            raise
+        logger.debug("Prompt formatted: %s", message.content[:50])
+        response = await self._request_llm([message])
+        return {"response": response.content}
 
     async def generate_response(
         self, data: GenerateResponseData
     ) -> ResponseToVacancyEntity:
         start_state = AIServiceState(**data)
         config = self._get_config(data["user_id"])
-        result = await self._workflow.ainvoke(start_state, config=config)  # type: ignore
+        logger.debug("Generate response to vacancy=%s", start_state["vacancy"].name)
+        result: AIServiceState = await self._workflow.ainvoke(
+            start_state, config=config
+        )  # type: ignore
+        logger.debug("Generated response: %s", result["response"])
         return ResponseToVacancyEntity(
             url_vacancy=result["vacancy"].url_vacancy,
             vacancy_hh_id=result["vacancy"].hh_id,
@@ -170,21 +277,20 @@ class AIService(IAIService):
             state = await self._workflow.aget_state(config)
 
             if not state.values:
+                logger.warning("Not saved state for user: id=%s", user_id)
                 raise ValueError(
                     "Не найдено сохраненного состояния. Необходимо собрать актуальную информацию"
                 )
             state_data = state.values
-            state_data.update({"response": response, "user_comments": user_comments})
-            result = await self._workflow.ainvoke(
-                state_data,
-                config,
-            )
         else:
-            start_state = AIServiceState(**data)
-            start_state["response"] = response
-            start_state["user_comments"] = user_comments
-            result = await self._workflow.ainvoke(start_state, config=config)  # type: ignore
+            state_data = AIServiceState(**data)
 
+        state_data.update({"response": response, "user_comments": user_comments})
+        logger.debug(
+            "Regenerate response to vacancy with user comments: %s", user_comments
+        )
+        result: AIServiceState = await self._workflow.ainvoke(state_data, config)
+        logger.debug("Regenerated response: %s", result["response"])
         return ResponseToVacancyEntity(
             url_vacancy=result["vacancy"].url_vacancy,
             vacancy_hh_id=result["vacancy"].hh_id,
