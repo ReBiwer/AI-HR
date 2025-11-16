@@ -1,3 +1,4 @@
+import logging
 from typing import Union
 
 from aiogram import Router, F
@@ -10,6 +11,9 @@ from source.constants.texts_message import ProfileMessages
 from source.constants.keys import StorageKeys, CallbackKeys
 from source.presentation.bot.keyboards.inline import resumes_keyboard, ResumeCallback
 from source.domain.entities.user import UserEntity
+
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -25,6 +29,7 @@ async def show_profile(
     Показывает информацию о пользователе
     """
     try:
+        logger.info("Обработка команды /profile")
         if user is None:
             raise PermissionError("Необходимо авторизоваться")
         active_resume_title = await state.get_value(StorageKeys.ACTIVE_RESUME_TITLE)
@@ -39,10 +44,12 @@ async def show_profile(
             text_message, reply_markup=resumes_keyboard(user.resumes)
         )
     except PermissionError as e:
-        await message.answer(f"{str(e)}\n" "Перейдите в начало для авторизации: /start")
+        logger.info("Пользователь не авторизован. %s", e)
+        await message.answer("Перейдите в начало для авторизации: /start")
     except Exception as e:
+        logger.critical("Ошибка обработки команды.", exc_info=e)
         await message.answer(
-            f"⚠️ Ошибка при получении профиля: {str(e)}\n"
+            "⚠️ Ошибка при получении профиля\n"
             "Попробуйте авторизоваться заново: /start"
         )
 
@@ -54,6 +61,11 @@ async def select_active_resume(
     state: FSMContext,
     user: FromDishka[Union[UserEntity, None]],
 ):
+    logger.info(
+        "Пользователь %s выбрал резюме %s",
+        callback.from_user.username,
+        callback_data.title,
+    )
     await state.update_data(
         {
             StorageKeys.ACTIVE_RESUME_ID: callback_data.resume_id,
@@ -73,6 +85,7 @@ async def logout(message: Union[Message, CallbackQuery], state: FSMContext):
     """
     Выход из аккаунта (очистка информации о пользователе их FSMContext).
     """
+    logger.info("Пользователь %s выполнил logout", message.from_user.username)
     await state.set_data({StorageKeys.USER_INFO: None})
     text_message = (
         "👋 Вы успешно вышли из аккаунта.\n\n" "Для повторной работы используйте /start"

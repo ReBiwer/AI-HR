@@ -1,3 +1,4 @@
+import logging
 from typing import Match
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
@@ -15,6 +16,9 @@ from source.application.use_cases.generate_response import GenerateResponseUseCa
 from source.application.use_cases.regenerate_response import RegenerateResponseUseCase
 from source.domain.entities.resume import ResumeEntity
 from source.domain.entities.user import UserEntity
+
+
+logger = logging.getLogger(__name__)
 
 reg_pattern = r"(?:https?://)?(?:[\w-]+\.)*hh\.ru/vacancy/(?P<vacancy_id>\d+)(?:[/?#][^\s.,!?)]*)?"
 
@@ -34,6 +38,11 @@ async def handler_hh_vacancy(
     resume: FromDishka[ResumeEntity | None],
     generate_case: FromDishka[GenerateResponseUseCase],
 ):
+    logger.info(
+        "Пришел запрос на генерацию отклика на вакансию %s пользователя %s",
+        url.string,
+        message.from_user.username,
+    )
     if resume:
         await state.update_data({StorageKeys.CURRENT_VACANCY_URL: url.string})
         await state.update_data(
@@ -46,10 +55,14 @@ async def handler_hh_vacancy(
             resume_hh_id=resume.hh_id,
         )
         response = await generate_case(dto)
+        logger.info("Сгенерированный отклик: %s", response.message)
         await message.answer(
             response.message, reply_markup=send_or_regenerate_ai_response()
         )
         return
+    logger.info(
+        "У пользователя %s не выбрано активное резюме", message.from_user.username
+    )
     await message.answer(AIMessages.no_active_resume())
 
 
@@ -61,8 +74,10 @@ async def send_ai_response(
     hh_service: FromDishka[IHHService],
 ):
     await callback.answer()
+    url_vacancy = await state.get_value(StorageKeys.CURRENT_VACANCY_URL)
+    logger.info("Отправка отклика на резюме %s", url_vacancy)
     response = ResponseToVacancyEntity(
-        url_vacancy=await state.get_value(StorageKeys.CURRENT_VACANCY_URL),
+        url_vacancy=url_vacancy,
         vacancy_hh_id=await state.get_value(StorageKeys.CURRENT_VACANCY_HH_ID),
         resume_hh_id=resume.hh_id,
         message=callback.message.text,
@@ -75,6 +90,7 @@ async def requesting_user_edits(
     callback: CallbackQuery,
     state: FSMContext,
 ):
+    logger.info("Пользователь решил переделать отклик")
     await callback.answer()
     await state.update_data({StorageKeys.AI_RESPONSE: callback.message.text})
     await callback.message.answer(AIMessages.request_user_comments())
@@ -92,6 +108,9 @@ async def regenerate_response(
     url = await state.get_value(StorageKeys.CURRENT_VACANCY_URL)
     ai_response = await state.get_value(StorageKeys.AI_RESPONSE)
     user_comments = message.text
+    logger.info(
+        "Исправления пользователя %s: %s", message.from_user.username, user_comments
+    )
     dto = QueryRecreateDTO(
         subject=user.hh_id,
         user_id=user.id,

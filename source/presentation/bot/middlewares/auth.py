@@ -1,4 +1,5 @@
 import re
+import logging
 from typing import Any, Awaitable, Callable, Dict
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Message
@@ -6,6 +7,9 @@ from aiogram.fsm.context import FSMContext
 
 from source.domain.entities.user import UserEntity
 from source.constants.keys import StorageKeys
+
+
+logger = logging.getLogger(__name__)
 
 
 class AuthMiddleware(BaseMiddleware):
@@ -42,6 +46,7 @@ class AuthMiddleware(BaseMiddleware):
             Результат выполнения handler или None, если авторизация не пройдена
         """
 
+        logger.debug("Обработка AuthMiddleware")
         # Проверяем сообщение на приватность
         check_match_to_patterns = any(
             bool(pattern.fullmatch(message.text)) for pattern in self.PRIVATE_PATTERN
@@ -50,8 +55,12 @@ class AuthMiddleware(BaseMiddleware):
             any(message.text.startswith(cmd) for cmd in self.PUBLIC_COMMANDS)
             and not check_match_to_patterns
         ):
+            logger.debug("Команда или паттерн не приватный")
             return await handler(message, data)
 
+        logger.debug(
+            "Команда или паттерны приватный. Проверка авторизации пользователя"
+        )
         # Получаем FSM context
         state: FSMContext = data.get("state")
         data_state = await state.get_data()
@@ -59,8 +68,10 @@ class AuthMiddleware(BaseMiddleware):
             data_state[StorageKeys.USER_INFO] = UserEntity.model_validate_json(
                 data_state[StorageKeys.USER_INFO]
             )
+            logger.debug("Пользователь авторизован")
             return await handler(message, data)
 
+        logger.warning("Пользователь %s не авторизован", message.from_user.username)
         await message.answer(
             "Необходимо авторизоваться.\n" "Используйте команду /start для начала."
         )
