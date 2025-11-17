@@ -42,6 +42,40 @@ services:
     networks:
       - my_networks
 
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-8000}:${BACKEND_PORT:-8000}"
+    restart: unless-stopped
+    networks:
+      - my_networks
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: bot
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - my_networks
+
 volumes:
   redis_data:
   initdb:
