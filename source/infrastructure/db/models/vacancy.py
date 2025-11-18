@@ -1,11 +1,10 @@
 from typing import TYPE_CHECKING
-from sqlalchemy import String, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
+
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import ARRAY
 
 from source.infrastructure.db.models.base import BaseModel
-
 
 if TYPE_CHECKING:
     from .employer import EmployerModel
@@ -25,6 +24,4 @@ class VacancyModel(BaseModel):
     key_skills: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
 
     employer_id: Mapped[str] = mapped_column(ForeignKey("employers.id"))
-    employer: Mapped["EmployerModel"] = relationship(
-        back_populates="vacancies", lazy="selectin"
-    )
+    employer: Mapped["EmployerModel"] = relationship(back_populates="vacancies", lazy="selectin")

@@ -1,6 +1,6 @@
-from .user import UserModel
-from .resume import ResumeModel, JobExperienceModel
 from .employer import EmployerModel
+from .resume import JobExperienceModel, ResumeModel
+from .user import UserModel
 from .vacancy import VacancyModel
 
 __all__ = [

@@ -1,12 +1,13 @@
 import logging
 from typing import Annotated
-from fastapi import APIRouter, Query, HTTPException, Request, status
-from fastapi.responses import RedirectResponse
+
 from dishka import FromDishka
 from dishka.integrations.fastapi import DishkaRoute
+from fastapi import APIRouter, Query, Request
+from fastapi.responses import RedirectResponse
 from starlette.routing import NoMatchFound
 
-from source.application.services.hh_service import IHHService, AuthTokens
+from source.application.services.hh_service import AuthTokens, IHHService
 from source.application.use_cases.auth_hh import OAuthHHUseCase
 from source.infrastructure.settings.app import app_settings
 
@@ -45,9 +46,7 @@ async def get_tokens(
     request: Request,
     use_case: FromDishka[OAuthHHUseCase],
     code: Annotated[str, Query(description="Код авторизации от HeadHunter")],
-    state: Annotated[
-        str, Query(description="Состояние переданное для возврата после авторизации")
-    ],
+    state: Annotated[str, Query(description="Состояние переданное для возврата после авторизации")],
 ) -> RedirectResponse:
     """
     Эндпоинт для получения токенов после OAuth редиректа от HeadHunter.
@@ -60,9 +59,7 @@ async def get_tokens(
     """
     try:
         logger.info("Обмен exchange token'а на access и refresh токены")
-        redirect_url, tokens = await use_case(
-            code, state, request, app_settings.HH_FAKE_SUBJECT
-        )
+        redirect_url, tokens = await use_case(code, state, request, app_settings.HH_FAKE_SUBJECT)
         response = RedirectResponse(redirect_url)
         response.set_cookie("access_token", value=tokens["access_token"])
         response.set_cookie("refresh_token", value=tokens["refresh_token"])
@@ -70,18 +67,10 @@ async def get_tokens(
         return response
     except ConnectionError:
         logger.error("Ошибка соединения с API hh.ru")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Сервис HeadHunter временно недоступен. Попробуйте позже.",
-        )
+        raise
     except NoMatchFound as e:
-        logger.critical(
-            "Не корректно передан state=%s. Детали ошибки: %s", state, exc_info=e
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Не корректно передан {state=}. Детали ошибки: {e}",
-        )
+        logger.critical("Не корректно передан state=%s. Детали ошибки: %s", state, exc_info=e)
+        raise
 
 
 @router.get("/hh/tokens/test", name="test_tokens")

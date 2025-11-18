@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
+
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from source.infrastructure.db.models.base import BaseModel
-
 
 if TYPE_CHECKING:
     from .resume import ResumeModel
@@ -18,9 +18,7 @@ class UserModel(BaseModel):
     last_name: Mapped[str] = mapped_column(String, nullable=False)
     phone: Mapped[str | None] = mapped_column(String, nullable=True)
     email: Mapped[str | None] = mapped_column(String, nullable=True)
-    telegram_id: Mapped[int | None] = mapped_column(
-        Integer, unique=True, index=True, nullable=True
-    )
+    telegram_id: Mapped[int | None] = mapped_column(Integer, unique=True, index=True, nullable=True)
 
     resumes: Mapped[list["ResumeModel"]] = relationship(
         back_populates="user",

@@ -1,13 +1,13 @@
 import re
-from typing import TypedDict, Union
 from abc import ABC, abstractmethod
+from typing import TypedDict
 
 from source.application.services.ai_service import GenerateResponseData
-from source.domain.entities.vacancy import VacancyEntity, Experience
 from source.domain.entities.employer import EmployerEntity
-from source.domain.entities.resume import ResumeEntity, JobExperienceEntity
 from source.domain.entities.response import ResponseToVacancyEntity
+from source.domain.entities.resume import JobExperienceEntity, ResumeEntity
 from source.domain.entities.user import UserEntity
+from source.domain.entities.vacancy import Experience, VacancyEntity
 
 
 class AuthTokens(TypedDict):
@@ -35,9 +35,7 @@ class IHHService(ABC):
             "last_name": data["last_name"],
             "phone": data["phone"],
             "email": data["email"] if data["email"] else None,
-            "resumes": [
-                self._serialize_data_resume(data) for data in data["resumes_data"]
-            ],
+            "resumes": [self._serialize_data_resume(data) for data in data["resumes_data"]],
         }
         return UserEntity.model_validate(user_data)
 
@@ -52,9 +50,7 @@ class IHHService(ABC):
             "hh_id": data["id"],
             "url_vacancy": data["alternate_url"],
             "name": data["name"],
-            "experience": Experience(
-                id=data["experience"]["id"], name=data["experience"]["name"]
-            ),
+            "experience": Experience(id=data["experience"]["id"], name=data["experience"]["name"]),
             "description": data["description"],
             "key_skills": data["key_skills"],
             "employer_id": data["employer"]["id"],
@@ -95,8 +91,7 @@ class IHHService(ABC):
             "name": data["first_name"],
             "surname": data["last_name"],
             "job_experience": [
-                JobExperienceEntity.model_validate(experience)
-                for experience in data["experience"]
+                JobExperienceEntity.model_validate(experience) for experience in data["experience"]
             ],
             "skills": data["skill_set"],
         }
@@ -135,35 +130,27 @@ class IHHService(ABC):
         ...
 
     @abstractmethod
-    async def get_me(self, subject: Union[int, str]) -> UserEntity:
+    async def get_me(self, subject: int | str) -> UserEntity:
         """Метод возвращает информацию о залогиненным пользователе"""
         ...
 
     @abstractmethod
-    async def get_vacancies(
-        self, subject: Union[int, str], **filter_query
-    ) -> list[VacancyEntity]:
+    async def get_vacancies(self, subject: int | str, **filter_query) -> list[VacancyEntity]:
         """Метод для поиска вакансий по фильтрам"""
         ...
 
     @abstractmethod
-    async def get_vacancy_data(
-        self, subject: Union[int, str], vacancy_id: str
-    ) -> VacancyEntity:
+    async def get_vacancy_data(self, subject: int | str, vacancy_id: str) -> VacancyEntity:
         """Метод для получения информации о вакансии"""
         ...
 
     @abstractmethod
-    async def get_employer_data(
-        self, subject: Union[int, str], employer_id: str
-    ) -> EmployerEntity:
+    async def get_employer_data(self, subject: int | str, employer_id: str) -> EmployerEntity:
         """Метод для получения информации о работодателе"""
         ...
 
     @abstractmethod
-    async def get_resume_data(
-        self, subject: Union[int, str], resume_id: str
-    ) -> ResumeEntity:
+    async def get_resume_data(self, subject: int | str, resume_id: str) -> ResumeEntity:
         """Метод для получения информации из резюме авторизованного пользователя"""
         ...
 
@@ -175,7 +162,7 @@ class IHHService(ABC):
     @abstractmethod
     async def data_collect_for_llm(
         self,
-        subject: Union[int, str],
+        subject: int | str,
         user_id: int,
         vacancy_id: str,
         resume_id: str,

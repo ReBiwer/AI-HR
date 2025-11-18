@@ -1,22 +1,22 @@
 import logging
-from typing import Match
-from aiogram import Router, F
+from re import Match
+
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import Message, CallbackQuery
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 
-from source.application.services.hh_service import IHHService
-from source.domain.entities.response import ResponseToVacancyEntity
-from source.presentation.bot.keyboards.inline import send_or_regenerate_ai_response
-from source.constants.keys import CallbackKeys, StorageKeys
-from source.constants.texts_message import AIMessages
 from source.application.dtos.query import QueryCreateDTO, QueryRecreateDTO
+from source.application.services.hh_service import IHHService
 from source.application.use_cases.generate_response import GenerateResponseUseCase
 from source.application.use_cases.regenerate_response import RegenerateResponseUseCase
+from source.constants.keys import CallbackKeys, StorageKeys
+from source.constants.texts_message import AIMessages
+from source.domain.entities.response import ResponseToVacancyEntity
 from source.domain.entities.resume import ResumeEntity
 from source.domain.entities.user import UserEntity
-
+from source.presentation.bot.keyboards.inline import send_or_regenerate_ai_response
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +45,7 @@ async def handler_hh_vacancy(
     )
     if resume:
         await state.update_data({StorageKeys.CURRENT_VACANCY_URL: url.string})
-        await state.update_data(
-            {StorageKeys.CURRENT_VACANCY_HH_ID: url.group("vacancy_id")}
-        )
+        await state.update_data({StorageKeys.CURRENT_VACANCY_HH_ID: url.group("vacancy_id")})
         dto = QueryCreateDTO(
             subject=user.hh_id,
             user_id=user.id,
@@ -56,13 +54,9 @@ async def handler_hh_vacancy(
         )
         response = await generate_case(dto)
         logger.info("Сгенерированный отклик: %s", response.message)
-        await message.answer(
-            response.message, reply_markup=send_or_regenerate_ai_response()
-        )
+        await message.answer(response.message, reply_markup=send_or_regenerate_ai_response())
         return
-    logger.info(
-        "У пользователя %s не выбрано активное резюме", message.from_user.username
-    )
+    logger.info("У пользователя %s не выбрано активное резюме", message.from_user.username)
     await message.answer(AIMessages.no_active_resume())
 
 
@@ -108,9 +102,7 @@ async def regenerate_response(
     url = await state.get_value(StorageKeys.CURRENT_VACANCY_URL)
     ai_response = await state.get_value(StorageKeys.AI_RESPONSE)
     user_comments = message.text
-    logger.info(
-        "Исправления пользователя %s: %s", message.from_user.username, user_comments
-    )
+    logger.info("Исправления пользователя %s: %s", message.from_user.username, user_comments)
     dto = QueryRecreateDTO(
         subject=user.hh_id,
         user_id=user.id,
@@ -121,6 +113,4 @@ async def regenerate_response(
     )
     new_response = await regenerate_case(dto)
     await state.set_state()
-    return message.answer(
-        new_response.message, reply_markup=send_or_regenerate_ai_response()
-    )
+    return message.answer(new_response.message, reply_markup=send_or_regenerate_ai_response())

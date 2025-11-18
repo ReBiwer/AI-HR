@@ -1,15 +1,14 @@
 import logging
 from types import UnionType
-from typing import Any, Dict, Set, get_args, get_origin, Union
+from typing import Any, Union, get_args, get_origin
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic.fields import FieldInfo
-from sqlalchemy import select, inspect
+from sqlalchemy import inspect, select
 
 from source.application.repositories.base import ISQLRepository
 from source.domain.entities.base import BaseEntity
 from source.infrastructure.db.models.base import BaseModel
-
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +22,8 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
         *,
         model_class: type[BaseModel] = None,
         excluded_class: type[BaseModel] | None = None,
-        _visited: Set[type[BaseModel]] | None = None,
-    ) -> Dict[str, Dict[str, Any]]:
+        _visited: set[type[BaseModel]] | None = None,
+    ) -> dict[str, dict[str, Any]]:
         """
         Собирает структуру связей для ORM-модели (model_class переданный в атрибутах класса).
 
@@ -48,11 +47,9 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
         visited = set() if _visited is None else set(_visited)
         visited.add(inspected_model_class)
 
-        relations: Dict[str, Dict[str, Any]] = {}
+        relations: dict[str, dict[str, Any]] = {}
 
-        for rel_key, rel in sorted(
-            mapper.relationships.items(), key=lambda item: item[0]
-        ):
+        for rel_key, rel in sorted(mapper.relationships.items(), key=lambda item: item[0]):
             target_cls = rel.mapper.class_
 
             if excluded_class is not None and target_cls is excluded_class:
@@ -64,7 +61,7 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
                 continue
 
             logger.debug("Collected info")
-            relation_info: Dict[str, Any] = {
+            relation_info: dict[str, Any] = {
                 "module": target_cls.__module__,
                 "model": target_cls,
                 "direction": rel.direction.name,
@@ -85,8 +82,8 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
         *,
         entity_class: type[BaseEntity] = None,
         excluded_class: type[BaseEntity] | None = None,
-        _visited: Set[type[BaseEntity]] | None = None,
-    ) -> Dict[str, Dict[str, Any]]:
+        _visited: set[type[BaseEntity]] | None = None,
+    ) -> dict[str, dict[str, Any]]:
         """
         Собирает структуру связей для pydantic-модели (model_entity переданный в атрибутах класса).
 
@@ -108,7 +105,7 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
         visited = set() if _visited is None else set(_visited)
         visited.add(inspected_entity_class)
 
-        relations: Dict[str, Dict[str, Any]] = {}
+        relations: dict[str, dict[str, Any]] = {}
 
         def _unwrap(annotation: Any) -> Any:
             """
@@ -173,7 +170,7 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
                 continue
 
             logger.debug("Collected info")
-            relation_info: Dict[str, Any] = {
+            relation_info: dict[str, Any] = {
                 "module": target_cls.__module__,
                 "model": target_cls,
                 "uselist": is_collection,
@@ -193,7 +190,7 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
 
     def get_nested_relations(
         self,
-    ) -> Dict[str, tuple[type[BaseModel], type[BaseEntity]]]:
+    ) -> dict[str, tuple[type[BaseModel], type[BaseEntity]]]:
         """
         Функция для получения словаря для маппинга ORM модели и BaseEntity сущности
 
@@ -209,8 +206,8 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
         nested_dict = dict()
 
         def _collect_data(
-            entity_dict: Dict[str, Dict[str, Any]],
-            model_dict: Dict[str, Dict[str, Any]],
+            entity_dict: dict[str, dict[str, Any]],
+            model_dict: dict[str, dict[str, Any]],
         ):
             logger.debug(
                 "Collected data: model=%s, entity=%s",
@@ -245,7 +242,7 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
         self,
         nested_entity: BaseEntity,
         key_nested_entity: str,
-        nested_relations: Dict[str, tuple[type[BaseModel], type[BaseEntity]]],
+        nested_relations: dict[str, tuple[type[BaseModel], type[BaseEntity]]],
     ) -> BaseModel:
         # извлечение связи классов ORM модели и BaseEntity
         nested_model_cls, _ = nested_relations.pop(key_nested_entity)
@@ -255,15 +252,13 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
         # множество ключей, которые оказались sub nested ORM моделями
         dump_exclude_keys = set()
 
-        for key, field_info in nested_entity.__class__.model_fields.items():
+        for key, _field_info in nested_entity.__class__.model_fields.items():
             # если ключ есть во вложенных связях, значит берем этот атрибут в обработку
             if key in nested_relations:
                 # добавляем этот ключ в исключения
                 dump_exclude_keys.add(key)
                 # получаем атрибут вложенной сущности (может быть просто другой сущностью или же списком сущностей)
-                sub_nested_entity: BaseEntity | list[BaseEntity] = getattr(
-                    nested_entity, key
-                )
+                sub_nested_entity: BaseEntity | list[BaseEntity] = getattr(nested_entity, key)
 
                 # если это список сущностей, то итерируемся по каждой и
                 # рекурсивно получаем экземпляры соответствующих ORM моделей
@@ -280,9 +275,7 @@ class SQLAlchemyRepository[ET: BaseEntity, DBModel: BaseModel](ISQLRepository[ET
                 else:
                     # получаем ORM модель соответствующей данной сущности
                     sub_nested_model_cls, _ = nested_relations[key]
-                    sub_nested_model = sub_nested_model_cls(
-                        **sub_nested_entity.model_dump()
-                    )
+                    sub_nested_model = sub_nested_model_cls(**sub_nested_entity.model_dump())
                     # сохраняем в словарь с данными для конечной валидации модели
                     nested_data_model[key] = sub_nested_model
 

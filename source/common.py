@@ -1,6 +1,6 @@
-from pathlib import Path
 import logging
 import logging.config
+from pathlib import Path
 
 PATH_LOGS = f"{Path(__file__).resolve().parent.parent}/logs"
 

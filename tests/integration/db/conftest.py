@@ -1,19 +1,19 @@
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
-from alembic import config, command
+from alembic import command, config
 from sqlalchemy.ext.asyncio import (
-    create_async_engine,
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
+    create_async_engine,
 )
 
-from source.infrastructure.db.repositories.user import UserRepository
 from source.infrastructure.db.repositories.resume import (
     JobExperienceRepository,
     ResumeRepository,
 )
+from source.infrastructure.db.repositories.user import UserRepository
 from source.infrastructure.settings.test import TestAppSettings
 
 
@@ -32,9 +32,7 @@ def async_session_maker(async_engine: AsyncEngine) -> async_sessionmaker[AsyncSe
 
 
 @pytest.fixture(scope="package", autouse=True)
-async def run_migration(
-    request, test_settings: TestAppSettings, async_engine: AsyncEngine
-) -> None:
+async def run_migration(request, test_settings: TestAppSettings, async_engine: AsyncEngine) -> None:
     if not request.config.getoption("--run-migrations"):
         return
     alembic_config = config.Config(f"{test_settings.BASE_DIR}/alembic.ini")

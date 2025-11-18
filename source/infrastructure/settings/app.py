@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,7 +32,7 @@ class AppSettings(BaseSettings):
     HH_CLIENT_ID: str
     HH_CLIENT_SECRET: str
     HH_REDIRECT_URI: str
-    HH_FAKE_SUBJECT: int = 1
+    HH_TOKEN_URL: str = "https://api.hh.ru/token"
     # Настройки для работы с llm
     OPENAI_MODEL: str
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
@@ -44,7 +45,9 @@ class AppSettings(BaseSettings):
 
     @property
     def db_url(self) -> str:
-        return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:5432/{self.DB_NAME}"
+        return (
+            f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:5432/{self.DB_NAME}"
+        )
 
     @property
     def redis_url(self) -> str:

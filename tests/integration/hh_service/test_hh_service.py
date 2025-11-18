@@ -1,10 +1,10 @@
-from source.infrastructure.services.hh_service import HHService
-from source.infrastructure.settings.test import TestAppSettings
-from source.domain.entities.user import UserEntity
-from source.domain.entities.resume import ResumeEntity
-from source.domain.entities.vacancy import VacancyEntity
 from source.domain.entities.employer import EmployerEntity
 from source.domain.entities.response import ResponseToVacancyEntity
+from source.domain.entities.resume import ResumeEntity
+from source.domain.entities.user import UserEntity
+from source.domain.entities.vacancy import VacancyEntity
+from source.infrastructure.services.hh_service import HHService
+from source.infrastructure.settings.test import TestAppSettings
 
 
 async def test_get_me(hh_service: HHService, test_settings: TestAppSettings):
@@ -21,9 +21,7 @@ async def test_get_vacancy_data(
     test_settings: TestAppSettings,
     test_vacancy: VacancyEntity,
 ):
-    result = await hh_service.get_vacancy_data(
-        test_user_entity.hh_id, test_vacancy.hh_id
-    )
+    result = await hh_service.get_vacancy_data(test_user_entity.hh_id, test_vacancy.hh_id)
     assert result
     assert isinstance(result, VacancyEntity)
 
@@ -34,9 +32,7 @@ async def test_get_employer_data(
     test_settings: TestAppSettings,
     test_vacancy: VacancyEntity,
 ):
-    result = await hh_service.get_employer_data(
-        test_user_entity.hh_id, test_vacancy.employer_id
-    )
+    result = await hh_service.get_employer_data(test_user_entity.hh_id, test_vacancy.employer_id)
     assert result
     assert isinstance(result, EmployerEntity)
 

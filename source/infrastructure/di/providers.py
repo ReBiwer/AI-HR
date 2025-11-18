@@ -1,40 +1,40 @@
-from typing import AsyncGenerator, Union
+from collections.abc import AsyncGenerator
 
 from aiogram.fsm.context import FSMContext
 from dishka import Provider, Scope, provide
 from dishka.integrations.aiogram import AiogramMiddlewareData
-from redis.asyncio.client import Redis
-from hh_api.auth import OAuthConfig, RedisKeyedTokenStore, KeyedTokenStore
+from hh_api.auth import KeyedTokenStore, OAuthConfig, RedisKeyedTokenStore
 from langgraph.checkpoint.memory import BaseCheckpointSaver
 from langgraph.checkpoint.redis import AsyncRedisSaver
+from redis.asyncio.client import Redis
 
-from source.constants.keys import StorageKeys
-from source.domain.entities.resume import ResumeEntity
-from source.infrastructure.db.engine import async_session_maker
-from source.infrastructure.settings.app import app_settings
-from source.infrastructure.db.repositories.user import UserRepository
-from source.infrastructure.db.repositories.resume import (
-    ResumeRepository,
-    JobExperienceRepository,
-)
-from source.infrastructure.db.uow import UnitOfWork
-from source.infrastructure.services.hh_service import HHService, CustomTokenManager
-from source.infrastructure.services.ai_service import AIService
-from source.infrastructure.services.state_manager import StateManager
-from source.application.repositories.user import IUserRepository
-from source.application.repositories.resume import (
-    IResumeRepository,
-    IJobExperienceRepository,
-)
 from source.application.repositories.base import IUnitOfWork
-from source.application.services.hh_service import IHHService
+from source.application.repositories.resume import (
+    IJobExperienceRepository,
+    IResumeRepository,
+)
+from source.application.repositories.user import IUserRepository
 from source.application.services.ai_service import IAIService
+from source.application.services.hh_service import IHHService
 from source.application.services.state_manager import IStateManager
-from source.application.use_cases.generate_response import GenerateResponseUseCase
-from source.application.use_cases.regenerate_response import RegenerateResponseUseCase
 from source.application.use_cases.auth_hh import OAuthHHUseCase
 from source.application.use_cases.bot.authorization import AuthUseCase
+from source.application.use_cases.generate_response import GenerateResponseUseCase
+from source.application.use_cases.regenerate_response import RegenerateResponseUseCase
+from source.constants.keys import StorageKeys
+from source.domain.entities.resume import ResumeEntity
 from source.domain.entities.user import UserEntity
+from source.infrastructure.db.engine import async_session_maker
+from source.infrastructure.db.repositories.resume import (
+    JobExperienceRepository,
+    ResumeRepository,
+)
+from source.infrastructure.db.repositories.user import UserRepository
+from source.infrastructure.db.uow import UnitOfWork
+from source.infrastructure.services.ai_service import AIService
+from source.infrastructure.services.hh_service import CustomTokenManager, HHService
+from source.infrastructure.services.state_manager import StateManager
+from source.infrastructure.settings.app import app_settings
 
 
 class ServicesProviders(Provider):
@@ -46,7 +46,7 @@ class ServicesProviders(Provider):
             client_id=app_settings.HH_CLIENT_ID,
             client_secret=app_settings.HH_CLIENT_SECRET,
             redirect_uri=app_settings.HH_REDIRECT_URI,
-            token_url="https://api.hh.ru/token",
+            token_url=app_settings.HH_TOKEN_URL,
         )
 
     @provide
@@ -148,9 +148,7 @@ class BotProvider(Provider):
     scope = Scope.REQUEST
 
     @provide
-    async def get_user_bot(
-        self, middleware_data: AiogramMiddlewareData
-    ) -> Union[UserEntity | None]:
+    async def get_user_bot(self, middleware_data: AiogramMiddlewareData) -> UserEntity | None:
         state: FSMContext = middleware_data.get("state")
         data_state = await state.get_data()
         if StorageKeys.USER_INFO in data_state and data_state[StorageKeys.USER_INFO]:
@@ -163,18 +161,13 @@ class BotProvider(Provider):
         middleware_data: AiogramMiddlewareData,
         uow: IUnitOfWork,
         class_resume_repo: type[IResumeRepository],
-    ) -> Union[ResumeEntity | None]:
+    ) -> ResumeEntity | None:
         state: FSMContext = middleware_data.get("state")
         data_state = await state.get_data()
-        if (
-            StorageKeys.ACTIVE_RESUME_ID in data_state
-            and data_state[StorageKeys.ACTIVE_RESUME_ID]
-        ):
+        if StorageKeys.ACTIVE_RESUME_ID in data_state and data_state[StorageKeys.ACTIVE_RESUME_ID]:
             async with uow as session:
                 resume_repo = class_resume_repo(session)
-                resume = await resume_repo.get(
-                    id=data_state[StorageKeys.ACTIVE_RESUME_ID]
-                )
+                resume = await resume_repo.get(id=data_state[StorageKeys.ACTIVE_RESUME_ID])
             return resume
         return None
 

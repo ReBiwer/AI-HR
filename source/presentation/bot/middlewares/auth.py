@@ -1,13 +1,14 @@
-import re
 import logging
-from typing import Any, Awaitable, Callable, Dict
+import re
+from collections.abc import Awaitable, Callable
+from typing import Any
+
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject, Message
 from aiogram.fsm.context import FSMContext
+from aiogram.types import Message, TelegramObject
 
-from source.domain.entities.user import UserEntity
 from source.constants.keys import StorageKeys
-
+from source.domain.entities.user import UserEntity
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +31,9 @@ class AuthMiddleware(BaseMiddleware):
 
     async def __call__(
         self,
-        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         message: Message,
-        data: Dict[str, Any],
+        data: dict[str, Any],
     ) -> Any:
         """
         Обработчик middleware.
@@ -58,9 +59,7 @@ class AuthMiddleware(BaseMiddleware):
             logger.debug("Команда или паттерн не приватный")
             return await handler(message, data)
 
-        logger.debug(
-            "Команда или паттерны приватный. Проверка авторизации пользователя"
-        )
+        logger.debug("Команда или паттерны приватный. Проверка авторизации пользователя")
         # Получаем FSM context
         state: FSMContext = data.get("state")
         data_state = await state.get_data()
@@ -72,7 +71,5 @@ class AuthMiddleware(BaseMiddleware):
             return await handler(message, data)
 
         logger.warning("Пользователь %s не авторизован", message.from_user.username)
-        await message.answer(
-            "Необходимо авторизоваться.\n" "Используйте команду /start для начала."
-        )
+        await message.answer("Необходимо авторизоваться.\nИспользуйте команду /start для начала.")
         return None

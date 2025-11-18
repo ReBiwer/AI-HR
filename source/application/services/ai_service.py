@@ -1,10 +1,10 @@
-from typing import TypedDict
 from abc import ABC, abstractmethod
+from typing import TypedDict
 
+from source.domain.entities.employer import EmployerEntity
 from source.domain.entities.response import ResponseToVacancyEntity
 from source.domain.entities.resume import ResumeEntity
 from source.domain.entities.vacancy import VacancyEntity
-from source.domain.entities.employer import EmployerEntity
 
 
 class GenerateResponseData(TypedDict):
@@ -17,9 +17,7 @@ class GenerateResponseData(TypedDict):
 
 class IAIService(ABC):
     @abstractmethod
-    async def generate_response(
-        self, data: GenerateResponseData
-    ) -> ResponseToVacancyEntity:
+    async def generate_response(self, data: GenerateResponseData) -> ResponseToVacancyEntity:
         """Метод для генерации отклика на вакансию"""
         ...
 

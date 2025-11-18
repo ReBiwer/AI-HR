@@ -4,22 +4,21 @@ import random
 from typing import TypedDict
 
 import openai
-from langchain_core.messages.base import BaseMessage
 from langchain.prompts import PromptTemplate
 from langchain_core.messages import HumanMessage
+from langchain_core.messages.base import BaseMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
-from langgraph.graph import StateGraph, START, END
-from langgraph.graph.state import CompiledStateGraph
 from langgraph.checkpoint.memory import BaseCheckpointSaver
+from langgraph.graph import END, START, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 
-from source.infrastructure.settings.app import app_settings
-from source.application.services.ai_service import IAIService, GenerateResponseData
-from source.domain.entities.response import ResponseToVacancyEntity
-from source.domain.entities.vacancy import VacancyEntity
-from source.domain.entities.resume import ResumeEntity
+from source.application.services.ai_service import GenerateResponseData, IAIService
 from source.domain.entities.employer import EmployerEntity
-
+from source.domain.entities.response import ResponseToVacancyEntity
+from source.domain.entities.resume import ResumeEntity
+from source.domain.entities.vacancy import VacancyEntity
+from source.infrastructure.settings.app import app_settings
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +32,7 @@ class AIServiceState(TypedDict):
     user_comments: str | None
 
 
-def gen_png_graph(
-    app_obj, schema_path: str = f"{app_settings.BASE_DIR}/schema_graph.png"
-) -> None:
+def gen_png_graph(app_obj, schema_path: str = f"{app_settings.BASE_DIR}/schema_graph.png") -> None:
     """
     Генерирует PNG-изображение графа и сохраняет его в файл.
 
@@ -49,11 +46,9 @@ def gen_png_graph(
 
 
 class AIService(IAIService):
-    def __init__(
-        self, checkpointer: BaseCheckpointSaver, create_png_graph: bool = False
-    ):
+    def __init__(self, checkpointer: BaseCheckpointSaver, create_png_graph: bool = False):
         logger.debug(
-            "Инициализация LLM модели: %s\n" "Base URL модели: %s",
+            "Инициализация LLM модели: %s\nBase URL модели: %s",
             app_settings.OPENAI_MODEL,
             app_settings.OPENROUTER_BASE_URL,
         )
@@ -116,24 +111,21 @@ class AIService(IAIService):
                 return await self.llm.ainvoke(messages)
             except openai.BadRequestError as e:
                 logger.error(
-                    "LLM отклонил запрос: вероятно, ошибка в промпте или параметрах. "
-                    "request_id=%s",
+                    "LLM отклонил запрос: вероятно, ошибка в промпте или параметрах. request_id=%s",
                     getattr(e, "request_id", None),
                     exc_info=e,
                 )
                 raise
             except openai.AuthenticationError as e:
                 logger.critical(
-                    "LLM отклонил запрос из-за авторизации. Проверь API-ключ/лимиты. "
-                    "request_id=%s",
+                    "LLM отклонил запрос из-за авторизации. Проверь API-ключ/лимиты. request_id=%s",
                     getattr(e, "request_id", None),
                     exc_info=e,
                 )
                 raise
             except openai.NotFoundError as e:
                 logger.error(
-                    "LLM не смог найти указанный ресурс (модель или эндпоинт). "
-                    "request_id=%s",
+                    "LLM не смог найти указанный ресурс (модель или эндпоинт). request_id=%s",
                     getattr(e, "request_id", None),
                     exc_info=e,
                 )
@@ -158,10 +150,10 @@ class AIService(IAIService):
                     exc_info=e,
                 )
             except (
+                TimeoutError,
                 openai.APIConnectionError,
                 openai.APITimeoutError,
                 openai.RateLimitError,
-                asyncio.TimeoutError,
             ) as e:
                 logger.warning(
                     "Временный сбой при обращении к LLM. Повтор запроса "
@@ -188,9 +180,7 @@ class AIService(IAIService):
             exponential_delay = min(base_delay * (2 ** (attempt - 1)), max_delay)
             jitter = random.uniform(0, base_delay)
             sleep_for = exponential_delay + jitter
-            logger.debug(
-                "Ожидаем %.2f секунд перед следующим повтором LLM-запроса", sleep_for
-            )
+            logger.debug("Ожидаем %.2f секунд перед следующим повтором LLM-запроса", sleep_for)
             await asyncio.sleep(sleep_for)
 
         return None
@@ -248,15 +238,11 @@ class AIService(IAIService):
         response = await self._request_llm([message])
         return {"response": response.content}
 
-    async def generate_response(
-        self, data: GenerateResponseData
-    ) -> ResponseToVacancyEntity:
+    async def generate_response(self, data: GenerateResponseData) -> ResponseToVacancyEntity:
         start_state = AIServiceState(**data)
         config = self._get_config(data["user_id"])
         logger.debug("Generate response to vacancy=%s", start_state["vacancy"].name)
-        result: AIServiceState = await self._workflow.ainvoke(
-            start_state, config=config
-        )  # type: ignore
+        result: AIServiceState = await self._workflow.ainvoke(start_state, config=config)  # type: ignore
         logger.debug("Generated response: %s", result["response"])
         return ResponseToVacancyEntity(
             url_vacancy=result["vacancy"].url_vacancy,
@@ -286,9 +272,7 @@ class AIService(IAIService):
             state_data = AIServiceState(**data)
 
         state_data.update({"response": response, "user_comments": user_comments})
-        logger.debug(
-            "Regenerate response to vacancy with user comments: %s", user_comments
-        )
+        logger.debug("Regenerate response to vacancy with user comments: %s", user_comments)
         result: AIServiceState = await self._workflow.ainvoke(state_data, config)
         logger.debug("Regenerated response: %s", result["response"])
         return ResponseToVacancyEntity(

@@ -1,20 +1,18 @@
 import json
 import logging
-from typing import Union
 
-from aiogram.types import Message
 from aiogram.dispatcher.router import Router
-from aiogram.filters.command import CommandStart, CommandObject
+from aiogram.filters.command import CommandObject, CommandStart
 from aiogram.fsm.context import FSMContext
+from aiogram.types import Message
 from dishka import FromDishka
 
+from source.application.services.hh_service import IHHService
 from source.application.use_cases.bot.authorization import AuthUseCase
-from source.presentation.bot.keyboards.inline import profile_keyboard
 from source.constants.keys import StorageKeys
 from source.constants.texts_message import StartMessages
-from source.application.services.hh_service import IHHService
 from source.domain.entities.user import UserEntity
-
+from source.presentation.bot.keyboards.inline import profile_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +26,7 @@ async def start(
     state: FSMContext,
     hh_service: FromDishka[IHHService],
     auth_use_case: FromDishka[AuthUseCase],
-    user: FromDishka[Union[UserEntity | None]],
+    user: FromDishka[UserEntity | None],
     command: CommandObject = None,
 ):
     """
@@ -48,9 +46,7 @@ async def start(
     if args:
         logger.debug("Команда пришла с payload'ом")
         try:
-            logger.info(
-                "Начало авторизации пользователя %s", message.from_user.username
-            )
+            logger.info("Начало авторизации пользователя %s", message.from_user.username)
             user = await auth_use_case(payload_str=args, tg_id=message.from_user.id)
             logger.info("Пользователь %s авторизован", message.from_user.username)
             await state.update_data(
@@ -62,9 +58,7 @@ async def start(
             )
         except (json.JSONDecodeError, ValueError) as e:
             logger.critical("Ошибка обработки данных.", exc_info=e)
-            await message.answer(
-                "⚠️ Ошибка обработки данных авторизации. Попробуйте заново."
-            )
+            await message.answer("⚠️ Ошибка обработки данных авторизации. Попробуйте заново.")
     else:
         if user:
             logger.info("Пользователь авторизован")

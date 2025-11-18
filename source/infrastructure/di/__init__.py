@@ -1,21 +1,20 @@
-from fastapi import FastAPI
 from aiogram import Dispatcher
-from dishka import make_async_container, AsyncContainer
+from dishka import AsyncContainer, make_async_container
+from dishka.integrations.aiogram import AiogramProvider
+from dishka.integrations.aiogram import setup_dishka as aiogram_setup
 from dishka.integrations.fastapi import setup_dishka as fastapi_setup
-from dishka.integrations.aiogram import setup_dishka as aiogram_setup, AiogramProvider
+from fastapi import FastAPI
 
 from source.infrastructure.di.providers import (
+    BotProvider,
+    RepositoriesProviders,
     ServicesProviders,
     UseCasesProviders,
-    RepositoriesProviders,
-    BotProvider,
 )
 
 
 def container_factory() -> AsyncContainer:
-    return make_async_container(
-        ServicesProviders(), UseCasesProviders(), RepositoriesProviders()
-    )
+    return make_async_container(ServicesProviders(), UseCasesProviders(), RepositoriesProviders())
 
 
 def bot_container_factory() -> AsyncContainer:

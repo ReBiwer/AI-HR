@@ -1,6 +1,8 @@
+from collections.abc import Mapping
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import uuid4
-from datetime import timedelta, timezone, datetime
-from typing import Mapping, Any, Union, Optional
+
 from jose import jwt
 
 
@@ -8,10 +10,10 @@ def encode_jwt(
     payload: Mapping[str, Any],
     key: str,
     *,
-    expires_in: Union[int, timedelta] = 300,
-    issuer: Optional[str] = None,
-    audience: Optional[Union[str, list[str]]] = None,
-    algorithm: Optional[str] = None,
+    expires_in: int | timedelta = 300,
+    issuer: str | None = None,
+    audience: str | list[str] | None = None,
+    algorithm: str | None = None,
 ) -> str:
     """
     Подписывает JWT короткоживущим токеном.
@@ -53,7 +55,7 @@ def encode_jwt(
     # 1) Срок действия
     if isinstance(expires_in, int):
         expires_in = timedelta(seconds=expires_in)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     exp = now + expires_in
 
     # 2) Базовые зарегистрированные клеймы

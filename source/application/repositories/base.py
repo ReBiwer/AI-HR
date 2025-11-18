@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Protocol
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from source.domain.entities.base import BaseEntity
 

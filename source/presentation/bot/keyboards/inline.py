@@ -1,7 +1,8 @@
 from typing import Literal
-from pydantic import Field
-from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardMarkup
+
 from aiogram.filters.callback_data import CallbackData
+from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardMarkup
+from pydantic import Field
 
 from source.constants.keys import CallbackKeys
 from source.domain.entities.resume import ResumeEntity

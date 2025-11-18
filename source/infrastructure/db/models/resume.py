@@ -1,12 +1,11 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, ForeignKey, DateTime
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from source.infrastructure.db.models.base import BaseModel
-
 
 if TYPE_CHECKING:
     from .user import UserModel
@@ -15,9 +14,7 @@ if TYPE_CHECKING:
 class JobExperienceModel(BaseModel):
     __tablename__ = "job_experiences"
 
-    resume_id: Mapped[str] = mapped_column(
-        ForeignKey("resumes.id", ondelete="CASCADE"), index=True
-    )
+    resume_id: Mapped[str] = mapped_column(ForeignKey("resumes.id", ondelete="CASCADE"), index=True)
 
     company: Mapped[str] = mapped_column(String, nullable=False)
     position: Mapped[str] = mapped_column(String, nullable=False)

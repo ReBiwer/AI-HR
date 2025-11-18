@@ -1,10 +1,10 @@
-from typing import TypedDict, Union
+from typing import TypedDict
 
 from source.domain.entities.base import BaseEntity
 
 
 class Experience(TypedDict):
-    id: Union[str, int]
+    id: str | int
     name: str
 
 

@@ -1,5 +1,5 @@
-from source.infrastructure.db.repositories.user import UserRepository
 from source.domain.entities.user import UserEntity
+from source.infrastructure.db.repositories.user import UserRepository
 
 
 async def test_create_user(user_repo: UserRepository, test_user_entity: UserEntity):
@@ -8,9 +8,7 @@ async def test_create_user(user_repo: UserRepository, test_user_entity: UserEnti
     assert isinstance(result, UserEntity)
 
 
-async def test_duplicate_create_user(
-    user_repo: UserRepository, test_user_entity: UserEntity
-):
+async def test_duplicate_create_user(user_repo: UserRepository, test_user_entity: UserEntity):
     new_user = await user_repo.create(test_user_entity)
     duple_user = await user_repo.create(test_user_entity)
     assert new_user.id == duple_user.id

@@ -1,10 +1,10 @@
-from source.infrastructure.db.repositories.base import SQLAlchemyRepository
-from source.infrastructure.db.models.resume import ResumeModel, JobExperienceModel
 from source.application.repositories.resume import (
-    IResumeRepository,
     IJobExperienceRepository,
+    IResumeRepository,
 )
-from source.domain.entities.resume import ResumeEntity, JobExperienceEntity
+from source.domain.entities.resume import JobExperienceEntity, ResumeEntity
+from source.infrastructure.db.models.resume import JobExperienceModel, ResumeModel
+from source.infrastructure.db.repositories.base import SQLAlchemyRepository
 
 
 class ResumeRepository[ET: ResumeEntity, DBModel: ResumeModel](

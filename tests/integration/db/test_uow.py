@@ -1,9 +1,9 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from source.infrastructure.db.uow import UnitOfWork
-from source.infrastructure.db.repositories.user import UserRepository
 from source.domain.entities.user import UserEntity
+from source.infrastructure.db.repositories.user import UserRepository
+from source.infrastructure.db.uow import UnitOfWork
 
 
 async def test_uow_commit(async_session: AsyncSession, test_user_entity: UserEntity):
@@ -18,9 +18,7 @@ async def test_uow_commit(async_session: AsyncSession, test_user_entity: UserEnt
     assert fetched.name == test_user_entity.name
 
 
-async def test_uow_rollback_on_exception(
-    async_session: AsyncSession, test_user_entity: UserEntity
-):
+async def test_uow_rollback_on_exception(async_session: AsyncSession, test_user_entity: UserEntity):
     class Boom(Exception):
         pass
 

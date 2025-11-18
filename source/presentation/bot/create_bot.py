@@ -1,4 +1,5 @@
 import logging
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -6,10 +7,10 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.types import BotCommand, BotCommandScopeDefault
 
+from source.infrastructure.di import init_di_container_bot
+from source.infrastructure.settings.app import app_settings
 from source.presentation.bot.middlewares import AuthMiddleware
 from source.presentation.bot.routers import main_router
-from source.infrastructure.settings.app import app_settings
-from source.infrastructure.di import init_di_container_bot
 
 logger = logging.getLogger(__name__)
 

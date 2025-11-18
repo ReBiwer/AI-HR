@@ -1,7 +1,7 @@
 from pydantic import EmailStr
 
-from source.domain.entities.resume import ResumeEntity
 from source.domain.entities.base import BaseEntity
+from source.domain.entities.resume import ResumeEntity
 
 
 class UserEntity(BaseEntity):
@@ -20,5 +20,5 @@ class UserEntity(BaseEntity):
             f"Имя: {self.name}\n"
             f"{mid_name}"
             f"Фамилия: {self.last_name}\n"
-            f"Резюме: {'\n\n'.join((str(resume)for resume in self.resumes))}"
+            f"Резюме: {'\n\n'.join(str(resume) for resume in self.resumes)}"
         )

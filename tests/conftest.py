@@ -23,9 +23,7 @@ def browser_context_args(browser_context_args):
 @pytest.fixture(autouse=True)
 def _tune_playwright_timeouts(request) -> None:
     """Применяет таймауты только для тестов, использующих фикстуру `page`."""
-    if "page" in getattr(
-        request, "fixturenames", ()
-    ):  # не трогаем тесты без Playwright
+    if "page" in getattr(request, "fixturenames", ()):  # не трогаем тесты без Playwright
         page: Page = request.getfixturevalue("page")
         page.set_default_timeout(5000)
         page.set_default_navigation_timeout(15000)

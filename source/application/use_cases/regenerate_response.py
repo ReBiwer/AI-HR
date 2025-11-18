@@ -1,10 +1,9 @@
 import logging
 
+from source.application.dtos.query import QueryRecreateDTO
 from source.application.services.ai_service import IAIService
 from source.application.services.hh_service import IHHService
-from source.application.dtos.query import QueryRecreateDTO
 from source.domain.entities.response import ResponseToVacancyEntity
-
 
 logger = logging.getLogger(__name__)
 

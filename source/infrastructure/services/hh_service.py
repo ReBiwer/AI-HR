@@ -1,29 +1,28 @@
-import httpx
 import asyncio
 import logging
-from typing import Optional, Dict, Any
+from typing import Any
 
-from httpx import Response
+import httpx
 from hh_api.auth import TokenPair
+from hh_api.client import HHClient, Subject, TokenManager
 from hh_api.exceptions import HHAPIError, HHAuthError, HHNetworkError
-from hh_api.client import HHClient, TokenManager, Subject
+from httpx import Response
 
 from source.application.services.ai_service import GenerateResponseData
+from source.application.services.hh_service import AuthTokens, IHHService
 from source.domain.entities.employer import EmployerEntity
-from source.domain.entities.user import UserEntity
-from source.domain.entities.vacancy import VacancyEntity
-from source.application.services.hh_service import IHHService, AuthTokens
 from source.domain.entities.response import ResponseToVacancyEntity
 from source.domain.entities.resume import ResumeEntity
-
+from source.domain.entities.user import UserEntity
+from source.domain.entities.vacancy import VacancyEntity
 
 logger = logging.getLogger(__name__)
 
 
 class CustomHHClient(HHClient):
     async def get_employer(
-        self, employer_id: str, *, subject: Optional[Subject] = None
-    ) -> Dict[str, Any]:
+        self, employer_id: str, *, subject: Subject | None = None
+    ) -> dict[str, Any]:
         return (
             await self._request(
                 "GET",
@@ -56,7 +55,7 @@ class CustomHHClient(HHClient):
     async def authorization(self, tokens: TokenPair) -> dict[str, Any]:
         url_user = f"{self.base_url}/me"
         url_resumes = f"{self.base_url}/resumes/mine"
-        last_exc: Optional[Exception] = None
+        last_exc: Exception | None = None
         req_headers = {
             "Authorization": f"Bearer {tokens.access_token}",
             "User-Agent": self.user_agent,
@@ -152,7 +151,7 @@ class CustomHHClient(HHClient):
         assert last_exc is not None
         raise last_exc
 
-    async def get_me(self, subject: Optional[Subject] = None) -> Dict[str, Any]:
+    async def get_me(self, subject: Subject | None = None) -> dict[str, Any]:
         logger.debug("Запрос профиля HH. subject=%s", subject)
         return (
             await self._request(
@@ -163,8 +162,8 @@ class CustomHHClient(HHClient):
         ).json()
 
     async def get_resumes_from_url(
-        self, url: str, subject: Optional[Subject] = None
-    ) -> Dict[str, Any]:
+        self, url: str, subject: Subject | None = None
+    ) -> dict[str, Any]:
         logger.debug("Запрос списка резюме HH. subject=%s, url=%s", subject, url)
         return (
             await self._request(
@@ -174,18 +173,14 @@ class CustomHHClient(HHClient):
             )
         ).json()
 
-    async def get_vacancies(
-        self, subject: Optional[Subject], **filter_query
-    ) -> Dict[str, Any]:
+    async def get_vacancies(self, subject: Subject | None, **filter_query) -> dict[str, Any]:
         logger.debug(
             "Запрос вакансий HH. subject=%s, фильтры=%s",
             subject,
             filter_query,
         )
         return (
-            await self._request(
-                "GET", path="/vacancies", subject=subject, params=filter_query
-            )
+            await self._request("GET", path="/vacancies", subject=subject, params=filter_query)
         ).json()
 
 
@@ -201,9 +196,7 @@ class CustomTokenManager(TokenManager):
         }
         headers = {"User-Agent": self.user_agent}
         logger.debug("Request to exchange code on tokens")
-        resp = await self._post_with_retry(
-            self.config.token_url, data=data, headers=headers
-        )
+        resp = await self._post_with_retry(self.config.token_url, data=data, headers=headers)
         payload = resp.json()
         tokens = self._tokenpair_from_payload(payload)
         logger.debug("Tokens received")
@@ -239,13 +232,11 @@ class HHService(IHHService):
             access_token=tokens.access_token, refresh_token=tokens.refresh_token
         )
 
-    async def get_me(self, subject: Optional[Subject]) -> UserEntity:
+    async def get_me(self, subject: Subject | None) -> UserEntity:
         user_data = await self.hh_client.get_me(subject=subject)
         logger.debug("Request user hh profile (hh_id=%s)", subject)
 
-        resumes_data = await self.hh_client.get_resumes_from_url(
-            "/resumes/mine", subject=subject
-        )
+        resumes_data = await self.hh_client.get_resumes_from_url("/resumes/mine", subject=subject)
         # отдельный запрос делается, для подгрузки description
         # почему-то при загрузке всех резюме этого поля нет
         logger.debug("Request info about resumes user's")
@@ -263,9 +254,7 @@ class HHService(IHHService):
         user_data["resumes_data"] = valid_resumes_data
         return self._serialize_data_user(user_data)
 
-    async def get_vacancies(
-        self, subject: Optional[Subject], **filter_query
-    ) -> list[VacancyEntity]:
+    async def get_vacancies(self, subject: Subject | None, **filter_query) -> list[VacancyEntity]:
         logger.info(
             "Получение списка вакансий пользователя hh_id=%s с фильтрами=%s",
             subject,
@@ -277,17 +266,12 @@ class HHService(IHHService):
             len(vacancies.get("items", [])),
         )
         result = await asyncio.gather(
-            *[
-                self.get_vacancy_data(subject, vacancy["id"])
-                for vacancy in vacancies["items"]
-            ]
+            *[self.get_vacancy_data(subject, vacancy["id"]) for vacancy in vacancies["items"]]
         )
         logger.info("Загружены вакансии пользователя hh_id=%s", subject)
         return result
 
-    async def get_vacancy_data(
-        self, subject: Optional[Subject], vacancy_id: str
-    ) -> VacancyEntity:
+    async def get_vacancy_data(self, subject: Subject | None, vacancy_id: str) -> VacancyEntity:
         logger.debug(
             "Запрос детальной информации по вакансии vacancy_id=%s (subject=%s)",
             vacancy_id,
@@ -296,9 +280,7 @@ class HHService(IHHService):
         data = await self.hh_client.get_vacancy(vacancy_id, subject=subject)
         return self._serialize_data_vacancy(data)
 
-    async def get_employer_data(
-        self, subject: Optional[Subject], employer_id: str
-    ) -> EmployerEntity:
+    async def get_employer_data(self, subject: Subject | None, employer_id: str) -> EmployerEntity:
         logger.debug(
             "Запрос информации о работодателе employer_id=%s (subject=%s)",
             employer_id,
@@ -307,9 +289,7 @@ class HHService(IHHService):
         data = await self.hh_client.get_employer(employer_id, subject=subject)
         return self._serialize_data_employer(data)
 
-    async def get_resume_data(
-        self, subject: Optional[Subject], resume_id: str
-    ) -> ResumeEntity:
+    async def get_resume_data(self, subject: Subject | None, resume_id: str) -> ResumeEntity:
         logger.debug(
             "Запрос резюме resume_id=%s (subject=%s)",
             resume_id,
@@ -327,7 +307,7 @@ class HHService(IHHService):
 
     async def data_collect_for_llm(
         self,
-        subject: Optional[Subject],
+        subject: Subject | None,
         user_id: int,
         vacancy_id: str,
         resume_id: str,

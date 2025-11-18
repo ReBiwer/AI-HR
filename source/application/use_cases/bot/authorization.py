@@ -1,8 +1,9 @@
 import json
+
 from aiogram.utils.payload import decode_payload
 from hh_api.auth.token_manager import TokenManager
 
-from source.application.repositories.base import IUnitOfWork, ISQLRepository
+from source.application.repositories.base import ISQLRepository, IUnitOfWork
 from source.domain.entities.user import UserEntity
 
 

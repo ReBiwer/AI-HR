@@ -1,5 +1,6 @@
 from datetime import datetime
-from pydantic import EmailStr, BaseModel
+
+from pydantic import BaseModel, EmailStr
 
 from source.domain.entities.base import BaseEntity
 
@@ -32,9 +33,7 @@ class ResumeEntity(BaseEntity):
     contact_email: EmailStr
 
     def __str__(self):
-        job_experience = "\n".join(
-            [str(experience) for experience in self.job_experience]
-        )
+        job_experience = "\n".join([str(experience) for experience in self.job_experience])
         return (
             f"Имя: {self.name}, фамилия: {self.surname}\n"
             f"Опыт работы: {job_experience}\n"
