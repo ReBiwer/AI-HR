@@ -84,3 +84,25 @@ dev = [
     "pre-commit>=4.3.0",
     "ruff>=0.13.1",
 ]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["source", "tests"]
+exclude = ["**/migrations/**"]
+force-exclude = true
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "B", "I", "UP"]
+ignore = ["E501"]
+fixable = ["ALL"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["source"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
