@@ -1,4 +1,4 @@
-.PHONY: tests makemigrations migrate
+.PHONY: tests makemigrations migrate start-containers
 
 tests:
 	uv run pytest
@@ -8,3 +8,6 @@ makemigrations:
 
 migrate:
 	uv run alembic upgrade head
+
+start-containers:
+	docker compose up -d
