@@ -1,4 +1,4 @@
-.PHONY: tests makemigrations migrate start-containers
+.PHONY: tests makemigrations migrate run-bot run-web run-all run-linter
 
 tests:
 	uv run pytest
@@ -9,5 +9,14 @@ makemigrations:
 migrate:
 	uv run alembic upgrade head
 
-start-containers:
+run-all:
 	docker compose up -d
+
+run-bot:
+	docker compose up -d bot
+
+run-web:
+	docker compose up -d web
+
+run-linter:
+	uv run ruff check --fix && uv run ruff format
